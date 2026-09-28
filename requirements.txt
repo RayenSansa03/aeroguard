@@ -1,0 +1,13 @@
+# Calcul et données
+numpy>=2.1
+pandas>=2.2
+pyarrow>=18        # lire et écrire les fichiers Parquet
+
+# Graphiques
+matplotlib>=3.9
+
+# Notebooks dans VS Code
+ipykernel>=6.29
+
+# Tests
+pytest>=8.0
