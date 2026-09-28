@@ -1,4 +1,10 @@
 # --- AeroGuard ---
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ipynb_checkpoints/
 # Données et modèles : trop lourds pour GitHub (on garde seulement les .gitkeep)
 data/raw/*
 data/processed/*
