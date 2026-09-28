@@ -19,13 +19,16 @@ def score_z(mesures, donnees_saines):
     donnees_saines = np.asarray(donnees_saines, dtype=float)
     moyenne = donnees_saines.mean()
     ecart_type = donnees_saines.std()
+    if ecart_type == 0:                                        
+        raise ValueError(                                      
+            "Écart-type nul dans les données saines "          
+            "(capteur bloqué ?) : score z impossible."         
+        )                                                      
     return (mesures - moyenne) / ecart_type
 
 
 def detecter_anomalies(scores, seuil=3.0):
     """Renvoie True pour chaque score dont la valeur absolue dépasse le seuil.
-
-    
     """
     scores = np.asarray(scores, dtype=float)
     return np.abs(scores) > seuil
