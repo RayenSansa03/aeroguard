@@ -43,3 +43,22 @@ def etat_moteur(ecart, seuil_surveiller=40, seuil_urgent=80):
         return "surveiller"
     else:
         return "ok"
+
+
+def confirmer_alarmes(alarmes, k=3):
+    """Alarme confirmée seulement après k alarmes de suite."""
+    if k < 1:
+        raise ValueError("k doit être au moins 1.")
+    alarmes = np.asarray(alarmes, dtype=bool)
+    confirmees = np.zeros(len(alarmes), dtype=bool)
+    compteur = 0
+    for i, alarme in enumerate(alarmes):
+        compteur = compteur + 1 if alarme else 0    # +1 si alarme, sinon on repart à 0
+        confirmees[i] = compteur >= k
+    return confirmees
+
+
+def premiere_alarme(alarmes, k=3):
+    """Position de la 1re alarme confirmée, ou None s'il n'y en a pas."""
+    positions = np.flatnonzero(confirmer_alarmes(alarmes, k))
+    return int(positions[0]) if len(positions) > 0 else None    
