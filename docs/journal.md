@@ -15,3 +15,10 @@
 - **Fait :** tests pytest, branches et pull requests, tag v0, Docker (testé dans Codespaces), CI GitHub Actions, README final.
 - **Appris :** TDD, cycle branche → PR → merge, Dockerfile (image / conteneur), intégration continue.
 - **Bloquant :** rien.
+
+#####
+
+Leçon 1.4 : étiquettes vérifiées (RUL, hs), composant touché = HPT, ajout de data.py et de 5 tests (18 passed).
+
+
+
