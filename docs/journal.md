@@ -18,7 +18,22 @@
 
 #####
 
-Leçon 1.4 : étiquettes vérifiées (RUL, hs), composant touché = HPT, ajout de data.py et de 5 tests (18 passed).
+#####
 
+- **Fait :** chargement du dataset NASA DS01 (HDF5) dans un DataFrame avec Colab + Drive, exploration (6 moteurs dev, 4 test), sauvegarde en parquet.
+- **Appris :** h5py, np.hstack, groupby / agg, float32 pour économiser la mémoire ; T48 dépend de la phase du vol (maximale en montée).
+- **Bloquant :** erreur h5py sur les noms de colonnes (bytes) → résolue avec .decode().
 
+#####
 
+- **Fait :** vérification des étiquettes (RUL, hs), fonction composant_touche et table_vols dans data.py + 5 tests.
+- **Appris :** cycle + RUL constant, hs ne remonte jamais ; durée de vie 75 à 100 vols ; panne qui commence tôt (vols 19 à 38) ; seule l'efficacité HPT se dégrade ; ne jamais utiliser les colonnes T en entrée (fuite de données).
+- **Bloquant :** FileNotFoundError avec savefig (dossier manquant) → résolu avec os.makedirs(..., exist_ok=True).
+
+#####
+
+- **Fait :** normalisation par les conditions de vol (modèle du moteur sain + résidus) dans normalisation.py + 3 tests (21 passed).
+- **Appris :** résidu = mesuré − attendu ; régression polynomiale avec scikit-learn ; entraîner seulement sur les 15 premiers vols ; bruit divisé par 35 à 57 ; capteurs les plus sensibles : T50, T48, T24, Nc, Wf ; panne visible seulement vers les vols 40-50.
+- **Bloquant :** rien.
+
+#####
