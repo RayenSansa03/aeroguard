@@ -37,3 +37,7 @@
 - **Bloquant :** rien.
 
 #####
+
+- **Fait :** détection par seuil sur les résidus (score z + confirmation sur k vols), fonctions confirmer_alarmes et premiere_alarme + 5 tests (26 passed), évaluation dev puis test.
+- **Appris :** TDD (rouge → vert), installer mon package depuis GitHub dans Colab, compromis seuil / k, ne jamais régler sur test. Baseline : avance 42,7 vols (dev), 38,2 vols (test), 0 fausse alarme, 0 panne ratée.
+- **Bloquant :** import mal indenté dans les tests → corrigé (imports toujours en haut, collés à gauche).
