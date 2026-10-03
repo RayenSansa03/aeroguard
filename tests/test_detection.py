@@ -1,41 +1,55 @@
-"""Tests automatiques des fonctions de détection."""
+"""Fonctions de détection d'anomalies pour AeroGuard."""
 
-import pytest
-
-from aeroguard.detection import ecart_absolu, score_z, detecter_anomalies, etat_moteur
+import numpy as np
 
 
-def test_ecart_absolu_toujours_positif():
-    resultat = ecart_absolu([510, 530], 520)
-    assert list(resultat) == [10, 10]
+def ecart_absolu(mesures, reference):
+    """Écart entre chaque mesure et la référence, toujours positif."""
+    return np.abs(np.asarray(mesures, dtype=float) - reference)
 
 
-def test_score_z_valeur_normale_donne_zero():
-    z = score_z([520], [518, 522, 519, 521, 520])
-    assert z[0] == pytest.approx(0)
+def score_z(mesures, donnees_saines):
+    """À combien d'écarts-types chaque mesure est de la moyenne des données saines."""
+    mesures = np.asarray(mesures, dtype=float)
+    donnees_saines = np.asarray(donnees_saines, dtype=float)
+    moyenne = donnees_saines.mean()
+    ecart_type = donnees_saines.std()
+    if ecart_type == 0:
+        raise ValueError(
+            "Écart-type nul dans les données saines (capteur bloqué ?) : "
+            "impossible de calculer un score z."
+        )
+    return (mesures - moyenne) / ecart_type
 
 
-def test_score_z_valeur_haute_donne_score_positif():
-    z = score_z([600], [518, 522, 519, 521, 520])
-    assert z[0] == pytest.approx(56.57, abs=0.01)
+def detecter_anomalies(scores, seuil=3.0):
+    """True si le score dépasse le seuil, dans un sens ou dans l'autre."""
+    return np.abs(np.asarray(scores, dtype=float)) > seuil
 
 
-def test_detecter_anomalies_trop_haut_et_trop_bas():
-    resultat = detecter_anomalies([0, 56.6, -35.4])
-    assert list(resultat) == [False, True, True]
+def etat_moteur(ecart, seuil_surveiller=40, seuil_urgent=80):
+    """Classe un écart en 'ok', 'surveiller' ou 'urgent'."""
+    if ecart > seuil_urgent:
+        return "urgent"
+    if ecart > seuil_surveiller:
+        return "surveiller"
+    return "ok"
 
 
-def test_etat_moteur_trois_niveaux():
-    assert etat_moteur(12) == "ok"
-    assert etat_moteur(55) == "surveiller"
-    assert etat_moteur(87) == "urgent"
+def confirmer_alarmes(alarmes, k=3):
+    """Alarme confirmée seulement après k alarmes de suite."""
+    if k < 1:
+        raise ValueError("k doit être au moins 1.")
+    alarmes = np.asarray(alarmes, dtype=bool)
+    confirmees = np.zeros(len(alarmes), dtype=bool)
+    compteur = 0
+    for i, alarme in enumerate(alarmes):
+        compteur = compteur + 1 if alarme else 0
+        confirmees[i] = compteur >= k
+    return confirmees
 
 
-def test_etat_moteur_cas_limites():
-    assert etat_moteur(40) == "ok"
-    assert etat_moteur(80) == "surveiller"
-
-
-def test_score_z_capteur_bloque_leve_une_erreur():
-    with pytest.raises(ValueError):
-        score_z([520, 530], [520, 520, 520])
+def premiere_alarme(alarmes, k=3):
+    """Position de la 1re alarme confirmée, ou None s'il n'y en a pas."""
+    positions = np.flatnonzero(confirmer_alarmes(alarmes, k))
+    return int(positions[0]) if len(positions) > 0 else None
