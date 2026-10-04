@@ -65,3 +65,9 @@
 - **Fait :** leçon D1 — ruff (lint + format), pre-commit (dont blocage des fichiers > 5 Mo), couverture pytest-cov + Codecov, CI en 3 jobs (lint, tests, docker), badges, protection de main (PR + 3 checks obligatoires), .gitattributes pour les notebooks.
 - **Appris :** linter vs formateur, hooks pre-commit, couverture (Stmts / Miss / Missing), secrets GitHub, needs entre jobs, git rm --cached, git reset --hard origin/main. Couverture : 78 % → 97 %.
 - **Bloquant :** la couverture a révélé que tests/test_detection.py contenait le code de detection.py (copier-coller de la leçon 1.6) : 12 tests perdus sans alerte, restaurés. Commits annulés par les hooks → toujours vérifier la ligne « X files changed ».
+
+#####
+
+- **Fait :** préparation de X (126 features) et y (1 = usé) dans donnees_ml.py, avec un test anti-fuite. Premier modèle : modèle bête (DummyClassifier) et copieur (KNN, 5 voisins).
+- **Appris :** fit / predict, classification vs régression, classe positive, modèle de référence. Train : 3 716 vols, 70,5 % usés. Modèle bête : 70,2 % (répond toujours « usé »). Copieur : ≈ 80 % (sains 69 %, usés 84 %). Erreurs : fausses alarmes sur moteurs neufs et hésitation au début de la panne (dégradation encore invisible).
+- **Bloquant :** Colab ne trouvait pas aeroguard.donnees_ml → merger la PR avant Colab.
