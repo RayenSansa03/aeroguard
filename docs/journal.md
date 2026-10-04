@@ -71,3 +71,9 @@
 - **Fait :** préparation de X (126 features) et y (1 = usé) dans donnees_ml.py, avec un test anti-fuite. Premier modèle : modèle bête (DummyClassifier) et copieur (KNN, 5 voisins).
 - **Appris :** fit / predict, classification vs régression, classe positive, modèle de référence. Train : 3 716 vols, 70,5 % usés. Modèle bête : 70,2 % (répond toujours « usé »). Copieur : ≈ 80 % (sains 69 %, usés 84 %). Erreurs : fausses alarmes sur moteurs neufs et hésitation au début de la panne (dégradation encore invisible).
 - **Bloquant :** Colab ne trouvait pas aeroguard.donnees_ml → merger la PR avant Colab.
+
+#####
+
+- **Fait :** régression logistique (StandardScaler + LogisticRegression), probabilités avec predict_proba, effet du seuil de décision, poids des features. evaluation.py : appliquer_seuil, taux_par_classe, ajouter_au_leaderboard + 5 tests. Premier leaderboard (bête, copieur KNN, logistique).
+- **Appris :** sigmoïde (score → probabilité), seuil bas = plus de détections mais plus de fausses alarmes, features corrélées = poids à interpréter avec prudence. Logistique : exactitude […], usés détectés […], sains reconnus […]. Le modèle bête a 100 % d'usés détectés mais 0 % de sains reconnus : un seul chiffre ne suffit jamais.
+- **Bloquant :** ruff format annulait le commit → lancer `ruff format src tests` avant de commiter.
