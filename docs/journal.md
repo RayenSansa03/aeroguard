@@ -53,3 +53,9 @@
 - **Fait :** découpage train / validation / test par moteur dans decoupage.py + 4 tests (33 passed). DS01 : train moteurs 2, 3, 4, 6 (364 vols), validation 1, 5 (189 vols), test 7 à 10 (341 vols). Découpage sauvegardé dans decoupage_ds01.json.
 - **Appris :** validation = régler (bac blanc), test = note finale (une seule fois). Un moteur entier dans un seul groupe. Expérience du copieur (1 plus proche voisin) : pas d'effet de fuite visible sur DS01 (10,6 contre 10,1 vols), car tous les moteurs ont la même panne. Erreur de 4,3 vols en fin de vie : les features contiennent beaucoup d'information sur le RUL.
 - **Bloquant :** Colab ne trouvait pas aeroguard.decoupage → merger la PR avant d'utiliser le package dans Colab.
+
+#####
+
+- **Fait :** pipeline complet `preparer()` appliqué à 9 fichiers N-CMAPSS (DS01 à DS08c) : 7 473 vols, 99 moteurs (49 train, 11 val, 39 test), sans fuite. DS01 identique aux leçons précédentes (553 / 341 vols). Tag v1.
+- **Appris :** traiter des fichiers trop gros un par un (extraire → traiter → supprimer), points de sauvegarde, noms de moteurs uniques. 11 modes détaillés regroupés en 7 familles. Signatures : compresseurs → T30 et Nc montent ; turbines → T48/T50 montent, Nc baisse ; fan → P15/P21/P24 baissent.
+- **Bloquant :** DS08d est tronqué dans le zip officiel NASA (CRC correct mais données incomplètes) → exclu et documenté.
