@@ -77,3 +77,22 @@
 - **Fait :** régression logistique (StandardScaler + LogisticRegression), probabilités avec predict_proba, effet du seuil de décision, poids des features. evaluation.py : appliquer_seuil, taux_par_classe, ajouter_au_leaderboard + 5 tests. Premier leaderboard (bête, copieur KNN, logistique).
 - **Appris :** sigmoïde (score → probabilité), seuil bas = plus de détections mais plus de fausses alarmes, features corrélées = poids à interpréter avec prudence. Logistique : exactitude […], usés détectés […], sains reconnus […]. Le modèle bête a 100 % d'usés détectés mais 0 % de sains reconnus : un seul chiffre ne suffit jamais.
 - **Bloquant :** ruff format annulait le commit → lancer `ruff format src tests` avant de commiter.
+
+#####
+
+**Fait :**
+
+- Fonction `metriques()` dans `evaluation.py` : matrice de confusion, précision, rappel, F1, F1 macro, PR-AUC
+- 10 tests dans `test_evaluation.py`, ruff et pytest au vert
+- Notebook AeroGuard_23_metriques : matrices, F1 macro des 3 modèles, courbes PR, leaderboard
+
+**Appris :**
+
+- Précision = « quand je sonne, ai-je raison ? » ; rappel = « ai-je trouvé tous les usés ? »
+- Le modèle bête a un F1 ≈ 0,82 mais un F1 macro ≈ 0,41 : le F1 macro démasque le tricheur
+- La PR-AUC du hasard = part des positifs (≈ 0,70 ici), pas 0,5
+- Pour AeroGuard, rater une panne est plus grave qu'une fausse alarme → privilégier le rappel
+
+**Bloquant :**
+
+- Erreurs ruff E402/F811 : imports des tests collés dans src → un fichier src ne s'importe jamais lui-même
