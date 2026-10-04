@@ -13,3 +13,5 @@ ipykernel>=6.29
 pytest>=8.0
 
 scikit-learn>=1.5
+
+h5py>=3.11
