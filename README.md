@@ -28,6 +28,18 @@ Le « normal » est appris sur les vols sains de 5 moteurs ; la détection est t
 
 Cette baseline sert de référence : les modèles suivants (XGBoost, autoencodeur) devront détecter l'usure plus tôt.
 
+## ⚡ Accélération GPU (RAPIDS cuDF)
+
+Préparation des données N-CMAPSS DS01 (4,9 millions de lignes), GPU NVIDIA T4 (Google Colab) :
+
+| Tâche | pandas (CPU) | cuDF (GPU) | Gain |
+|---|---|---|---|
+| Lecture parquet | 1.954 s | 0.413 s | ×4.7 |
+| Moyenne par vol | 0.407 s | 0.086 s | ×4.7 |
+| Features par phase | 2.065 s | 0.106 s | ×19.5 |
+
+![CPU vs GPU](results/figures/19_cpu_vs_gpu.png)
+
 ## Structure du projet
 
 ```
