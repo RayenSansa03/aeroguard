@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import pandas as pd
+
 from aeroguard.data import COLONNES_T, charger_ncmapss, mode_de_panne
 from aeroguard.decoupage import verifier_sans_fuite
 from aeroguard.normalisation import CAPTEURS, W_COLS
@@ -12,7 +13,7 @@ N_VOLS, PANNE_APRES = 20, 12
 def faux_fichier(chemin):
     """Mini fichier au format N-CMAPSS : dev = moteurs 1, 2, 3 ; test = moteur 4."""
     rng = np.random.default_rng(0)
-    alt = [0, 5, 10, 10, 10, 10, 10, 10, 5, 0]                 # 10 secondes par vol
+    alt = [0, 5, 10, 10, 10, 10, 10, 10, 5, 0]  # 10 secondes par vol
     with h5py.File(chemin, "w") as f:
         f["A_var"] = np.array(["unit", "cycle", "Fc", "hs"], dtype="S")
         f["W_var"] = np.array(W_COLS, dtype="S")
@@ -25,7 +26,9 @@ def faux_fichier(chemin):
                     usure = max(c - PANNE_APRES, 0)
                     for a in alt:
                         w = [a, rng.uniform(0.2, 0.8), rng.uniform(40, 90), rng.uniform(450, 520)]
-                        x = [sum(w) + 0.5 * usure] * len(CAPTEURS)          # capteurs = règle simple + usure
+                        x = [sum(w) + 0.5 * usure] * len(
+                            CAPTEURS
+                        )  # capteurs = règle simple + usure
                         t = [0.0] * len(COLONNES_T)
                         t[COLONNES_T.index("HPT_eff_mod")] = -0.001 * usure
                         lignes.append([u, c, 1, int(c <= PANNE_APRES)] + w + x + t + [N_VOLS - c])
@@ -81,4 +84,4 @@ def test_preparer_voit_l_usure(tmp_path):
     vols = preparer(faux_fichier(tmp_path / "faux.h5"), "FAUX", moteurs_val=[3])
     debut = vols.loc[vols["cycle"] <= 10, "T48_mean_croisiere"].mean()
     fin = vols.loc[vols["cycle"] >= 18, "T48_mean_croisiere"].mean()
-    assert fin - debut > 2                         # le résidu monte avec l'usure
+    assert fin - debut > 2  # le résidu monte avec l'usure

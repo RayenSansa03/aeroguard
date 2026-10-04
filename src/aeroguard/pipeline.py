@@ -1,4 +1,5 @@
 """Pipeline complet : un fichier N-CMAPSS → une ligne par vol, prête pour les modèles."""
+
 import numpy as np
 import pandas as pd
 
@@ -28,8 +29,13 @@ def preparer(chemin, nom, moteurs_val=(), n_vols_sains=15):
 
         # 3) Étiquettes (hs, RUL, durée), classe de vol, mode de panne du moteur
         fc = df.groupby(["unit", "cycle"])["Fc"].first().reset_index()
-        modes = (df.groupby("unit")[COLONNES_T].last()
-                   .apply(mode_de_panne, axis=1).rename("mode").reset_index())
+        modes = (
+            df.groupby("unit")[COLONNES_T]
+            .last()
+            .apply(mode_de_panne, axis=1)
+            .rename("mode")
+            .reset_index()
+        )
         vols = vols.merge(table_vols(df), on=["unit", "cycle"])
         vols = vols.merge(fc, on=["unit", "cycle"]).merge(modes, on="unit")
 

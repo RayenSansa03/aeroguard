@@ -1,12 +1,14 @@
 import pandas as pd
 import pytest
+
 from aeroguard.decoupage import decouper_par_moteur, verifier_sans_fuite
 
 
 def faux_vols():
     """6 moteurs × 3 vols."""
-    return pd.DataFrame({"unit": [u for u in range(1, 7) for _ in range(3)],
-                         "cycle": [1, 2, 3] * 6})
+    return pd.DataFrame(
+        {"unit": [u for u in range(1, 7) for _ in range(3)], "cycle": [1, 2, 3] * 6}
+    )
 
 
 def test_aucun_moteur_dans_deux_groupes():
@@ -30,6 +32,6 @@ def test_meme_moteur_val_et_test_interdit():
 def test_verifier_sans_fuite_detecte_un_moteur_partage():
     vols = faux_vols()
     a = vols[vols["unit"].isin([1, 2])]
-    b = vols[vols["unit"].isin([2, 3])]        # le moteur 2 est dans les deux !
+    b = vols[vols["unit"].isin([2, 3])]  # le moteur 2 est dans les deux !
     with pytest.raises(ValueError):
         verifier_sans_fuite(a, b)

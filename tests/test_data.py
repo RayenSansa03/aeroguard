@@ -1,4 +1,5 @@
 import pandas as pd
+
 from aeroguard.data import COLONNES_T, composant_touche, table_vols
 
 
@@ -27,12 +28,14 @@ def test_sous_le_seuil_aucun():
 
 
 def test_table_vols_une_ligne_par_vol():
-    df = pd.DataFrame({
-        "unit":  [1, 1, 1, 1, 2],
-        "cycle": [1, 1, 2, 2, 1],
-        "hs":    [1, 1, 0, 0, 1],
-        "RUL":   [1, 1, 0, 0, 5],
-    })
+    df = pd.DataFrame(
+        {
+            "unit": [1, 1, 1, 1, 2],
+            "cycle": [1, 1, 2, 2, 1],
+            "hs": [1, 1, 0, 0, 1],
+            "RUL": [1, 1, 0, 0, 5],
+        }
+    )
     vols = table_vols(df)
     assert len(vols) == 3
     assert list(vols["duree_s"]) == [2, 2, 1]

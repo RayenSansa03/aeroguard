@@ -18,6 +18,8 @@ def verifier_sans_fuite(*groupes):
         moteurs = set(groupe["unit"])
         partages = vus & moteurs
         if partages:
-            raise ValueError(f"Fuite ! Moteurs présents dans plusieurs groupes : {sorted(partages)}")
+            raise ValueError(
+                f"Fuite ! Moteurs présents dans plusieurs groupes : {sorted(partages)}"
+            )
         vus |= moteurs
     return True
