@@ -59,3 +59,9 @@
 - **Fait :** pipeline complet `preparer()` appliqué à 9 fichiers N-CMAPSS (DS01 à DS08c) : 7 473 vols, 99 moteurs (49 train, 11 val, 39 test), sans fuite. DS01 identique aux leçons précédentes (553 / 341 vols). Tag v1.
 - **Appris :** traiter des fichiers trop gros un par un (extraire → traiter → supprimer), points de sauvegarde, noms de moteurs uniques. 11 modes détaillés regroupés en 7 familles. Signatures : compresseurs → T30 et Nc montent ; turbines → T48/T50 montent, Nc baisse ; fan → P15/P21/P24 baissent.
 - **Bloquant :** DS08d est tronqué dans le zip officiel NASA (CRC correct mais données incomplètes) → exclu et documenté.
+
+#####
+
+- **Fait :** leçon D1 — ruff (lint + format), pre-commit (dont blocage des fichiers > 5 Mo), couverture pytest-cov + Codecov, CI en 3 jobs (lint, tests, docker), badges, protection de main (PR + 3 checks obligatoires), .gitattributes pour les notebooks.
+- **Appris :** linter vs formateur, hooks pre-commit, couverture (Stmts / Miss / Missing), secrets GitHub, needs entre jobs, git rm --cached, git reset --hard origin/main. Couverture : 78 % → 97 %.
+- **Bloquant :** la couverture a révélé que tests/test_detection.py contenait le code de detection.py (copier-coller de la leçon 1.6) : 12 tests perdus sans alerte, restaurés. Commits annulés par les hooks → toujours vérifier la ligne « X files changed ».
