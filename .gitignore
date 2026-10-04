@@ -16,3 +16,8 @@ models/*
 # Fichiers de données lourds, où qu'ils soient
 *.h5
 *.zip
+
+# Couverture de tests
+.coverage
+coverage.xml
+htmlcov/

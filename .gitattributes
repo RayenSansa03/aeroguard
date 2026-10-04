@@ -1,0 +1,2 @@
+# Les notebooks sont de la documentation : ne pas les compter dans les langages du dépôt
+*.ipynb linguist-documentation
