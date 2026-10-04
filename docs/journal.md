@@ -47,3 +47,9 @@
 - **Fait :** découpage de chaque vol en 3 phases (montée, croisière, descente) et 126 features par vol (mean, std, max des résidus) dans features.py + 3 tests (29 passed). DS01 : 553 vols dev, 341 vols test.
 - **Appris :** groupby + agg + unstack, aplatir les noms de colonnes, pd.Categorical, crosstab. La montée (pleine puissance) montre le mieux la panne : T48_mean_montee score 40,8 contre 31,2 pour le résidu T48 global.
 - **Bloquant :** Colab ne trouvait pas aeroguard.features → la PR n'était pas encore mergée dans main.
+
+#####
+
+- **Fait :** découpage train / validation / test par moteur dans decoupage.py + 4 tests (33 passed). DS01 : train moteurs 2, 3, 4, 6 (364 vols), validation 1, 5 (189 vols), test 7 à 10 (341 vols). Découpage sauvegardé dans decoupage_ds01.json.
+- **Appris :** validation = régler (bac blanc), test = note finale (une seule fois). Un moteur entier dans un seul groupe. Expérience du copieur (1 plus proche voisin) : pas d'effet de fuite visible sur DS01 (10,6 contre 10,1 vols), car tous les moteurs ont la même panne. Erreur de 4,3 vols en fin de vie : les features contiennent beaucoup d'information sur le RUL.
+- **Bloquant :** Colab ne trouvait pas aeroguard.decoupage → merger la PR avant d'utiliser le package dans Colab.
