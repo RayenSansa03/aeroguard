@@ -32,13 +32,25 @@ Cette baseline sert de référence : les modèles suivants (XGBoost, autoencodeu
 
 Préparation des données N-CMAPSS DS01 (4,9 millions de lignes), GPU NVIDIA T4 (Google Colab) :
 
-| Tâche | pandas (CPU) | cuDF (GPU) | Gain |
-|---|---|---|---|
-| Lecture parquet | 1.954 s | 0.413 s | ×4.7 |
-| Moyenne par vol | 0.407 s | 0.086 s | ×4.7 |
-| Features par phase | 2.065 s | 0.106 s | ×19.5 |
+| Tâche              | pandas (CPU) | cuDF (GPU) | Gain  |
+| ------------------ | ------------ | ---------- | ----- |
+| Lecture parquet    | 1.954 s      | 0.413 s    | ×4.7  |
+| Moyenne par vol    | 0.407 s      | 0.086 s    | ×4.7  |
+| Features par phase | 2.065 s      | 0.106 s    | ×19.5 |
 
 ![CPU vs GPU](results/figures/19_cpu_vs_gpu.png)
+
+## ✈️ v1 — Pipeline complet N-CMAPSS
+
+- **9 fichiers NASA** (DS01 à DS08c), **7 familles de panne** (11 modes détaillés), **99 moteurs**, **7 473 vols**
+- Une ligne par vol : 126 features (résidus par phase de vol) + étiquettes (hs, RUL, mode et famille de panne)
+- Découpage par moteur : 49 train / 11 validation / 39 test, sans fuite, vérifié automatiquement
+- 42 tests automatiques (pytest + GitHub Actions)
+- DS08d exclu : fichier tronqué dans l'archive officielle NASA (CRC correct, données incomplètes)
+
+![Signatures des pannes](results/figures/110_signatures_pannes.png)
+
+**Ce que montrent les signatures :** compresseurs abîmés → T30 et Nc montent ; turbines abîmées → T48/T50 montent et Nc baisse ; fan abîmé → les pressions P15, P21 et P24 chutent.
 
 ## Structure du projet
 
