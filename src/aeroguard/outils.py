@@ -1,4 +1,5 @@
 """Petits outils transverses."""
+
 import time
 
 

@@ -1,6 +1,9 @@
 # AeroGuard
 
-![Tests](https://github.com/RayenSansa03/aeroguard/actions/workflows/tests.yml/badge.svg)
+[![CI](https://github.com/RayenSansa03/aeroguard/actions/workflows/ci.yml/badge.svg)](https://github.com/RayenSansa03/aeroguard/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/RayenSansa03/aeroguard/branch/main/graph/badge.svg)](https://codecov.io/gh/RayenSansa03/aeroguard)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![Python](https://img.shields.io/badge/python-3.13-blue)
 
 Système de détection d'anomalies pour une flotte de moteurs d'avion, construit sur les données NASA N-CMAPSS et accéléré par GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
 

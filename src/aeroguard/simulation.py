@@ -1,28 +1,27 @@
-"""Simulateur d'une flotte de moteurs d'avion qui s'usent.
-"""
+"""Simulateur d'une flotte de moteurs d'avion qui s'usent."""
 
 import numpy as np
 import pandas as pd
 
 
 def simuler_moteur(unit, n_vols, debut_usure, rng):
-    """Simule tous les vols d'un moteur, du vol 1 jusqu'à la panne.
-
-    """
+    """Simule tous les vols d'un moteur, du vol 1 jusqu'à la panne."""
     cycles = np.arange(1, n_vols + 1)
     usure = np.clip(cycles - debut_usure, 0, None)
 
     t48 = 520 + rng.normal(0, 5, n_vols) + 0.05 * usure**2
     p30 = 45 + rng.normal(0, 1, n_vols) - 0.005 * usure**2
 
-    return pd.DataFrame({
-        "unit": unit,
-        "cycle": cycles,
-        "T48": t48,
-        "P30": p30,
-        "hs": (cycles <= debut_usure).astype(int),
-        "rul": n_vols - cycles,
-    })
+    return pd.DataFrame(
+        {
+            "unit": unit,
+            "cycle": cycles,
+            "T48": t48,
+            "P30": p30,
+            "hs": (cycles <= debut_usure).astype(int),
+            "rul": n_vols - cycles,
+        }
+    )
 
 
 def simuler_flotte(n_moteurs=10, seed=42):
