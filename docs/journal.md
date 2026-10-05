@@ -96,3 +96,21 @@
 **Bloquant :**
 
 - Erreurs ruff E402/F811 : imports des tests collés dans src → un fichier src ne s'importe jamais lui-même
+
+#####
+
+**Fait :**
+
+- Fonction `poids_classes()` dans `donnees_ml.py` + 6 tests (dont comparaison avec sklearn)
+- Notebook AeroGuard_24_desequilibre : logistique avec et sans class_weight="balanced"
+- docs/baselines.md rédigé
+
+**Appris :**
+
+- Chez nous la classe rare est « sain » ; le modèle bête a 70 % d'exactitude et 0 % de sains reconnus
+- balanced : FP 39 → 13 mais FN 39 → 73, F1 macro 0,886 → 0,882 → on ne le garde pas
+- Pondérer déplace surtout le seuil : la PR-AUC ne bouge pas
+
+**Bloquant :**
+
+- FP/FN absents du leaderboard pour la ligne balanced → ajouter "fp" et "fn" aux clés enregistrées
