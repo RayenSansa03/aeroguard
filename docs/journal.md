@@ -95,3 +95,9 @@
 - **Fait :** module explication.py (decrire_feature, importances_triees) + 5 tests ; notebook AeroGuard_25_random_forest : arbre de profondeur 3, courbe de surapprentissage, Random Forest 200 arbres, top 10 des features, leaderboard.
 - **Appris :** un arbre = suite de questions oui/non ; 1re question = T48_mean_montee <= 1,255 (turbines), puis P21 (fan). Surapprentissage : profondeur None → train 1,000 mais val 0,787 ; meilleur arbre seul = profondeur 2 (val 0,851). Random Forest : F1 macro 0,844 < logistique 0,886 ; FN 28 (au lieu de 39) mais FP 73 (au lieu de 39) ; PR-AUC presque égale (0,985) → le problème vient surtout du seuil. Top features : T48 et T50 (turbines), puis T24 et Nc. Pas besoin de StandardScaler pour les arbres.
 - **Bloquant :** rien.
+
+---
+
+- **Fait :** module anomalies.py (score_anomalie, seuil_percentile, alertes) + 5 tests avec un faux modèle ; notebook AeroGuard_26_isolation_forest : entraînement sur les 1 096 vols sains du train, histogramme des scores, 3 seuils (90, 95, 99), leaderboard.
+- **Appris :** non supervisé = apprendre la normale, pas la panne ; une anomalie s'isole en peu de coupures ; règle d'or : entraîner sur les sains uniquement. Histogrammes sains/usés très chevauchés (début de panne invisible). p90 : FP 29, FN 241, F1 macro 0,663 ; p99 : FP 2, FN 444. Rappel 0,485 (p95) contre 0,951 pour la Random Forest ; PR-AUC 0,915 identique pour tous les seuils. Utile pour les pannes jamais vues → motivation de l'autoencodeur (module 5).
+- **Bloquant :** rien. Piège retenu : score_samples renvoie « plus grand = plus normal » → on inverse le signe.
