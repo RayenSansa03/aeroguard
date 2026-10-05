@@ -26,3 +26,32 @@ Poids balanced : sain 1,695 ; usé 0,709
   alarmes mais ajoute 34 pannes ratées, et le F1 macro ne s'améliore pas.
   Pour AeroGuard, rater une panne coûte plus cher qu'une fausse alarme.
 - La PR-AUC est identique : pondérer change surtout le seuil, pas l'ordre des vols.
+
+## Modèles du module 2 (validation, 819 vols)
+
+| Modèle               | F1 macro | PR-AUC | Rappel | FP  | FN  |
+| -------------------- | -------- | ------ | ------ | --- | --- |
+| logistique           | 0,886    | 0,987  | 0,932  | 39  | 39  |
+| logistique_balanced  | 0,882    | 0,987  | 0,873  | 13  | 73  |
+| random_forest        | 0,844    | 0,985  | 0,951  | 73  | 28  |
+| copieur_knn          | 0,763    | 0,903  | 0,843  | 75  | 90  |
+| isolation_forest_p95 | 0,612    | 0,915  | 0,485  | 20  | 296 |
+| bete                 | 0,412    | 0,702  | 1,000  | 244 | 0   |
+
+## Métriques métier (11 moteurs de validation)
+
+| Modèle               | k   | Moteurs détectés | Avance moyenne | Fausses alarmes |
+| -------------------- | --- | ---------------- | -------------- | --------------- |
+| random_forest        | 1   | 11 / 11          | 51,0           | 73              |
+| logistique           | 1   | 11 / 11          | 49,5           | 39              |
+| random_forest        | 3   | 11 / 11          | 48,1           | 31              |
+| logistique           | 3   | 11 / 11          | 46,1           | 9               |
+| isolation_forest_p90 | 1   | 11 / 11          | 42,2           | 29              |
+| isolation_forest_p90 | 3   | 11 / 11          | 24,8           | 3               |
+
+## Conclusion du module 2
+
+- Modèle de référence à battre au module 3 : **logistique, confirmation k = 3**
+  (F1 macro 0,886 ; 11/11 moteurs ; 46,1 vols d'avance ; 9 fausses alarmes).
+- Le non supervisé (Isolation Forest) prévient tous les moteurs mais tard (24,8 vols avec k = 3).
+- Points à creuser : moteurs prévenus tard (DS03_4, DS08c_5) et pannes hors turbines.

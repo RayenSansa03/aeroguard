@@ -101,3 +101,9 @@
 - **Fait :** module anomalies.py (score_anomalie, seuil_percentile, alertes) + 5 tests avec un faux modèle ; notebook AeroGuard_26_isolation_forest : entraînement sur les 1 096 vols sains du train, histogramme des scores, 3 seuils (90, 95, 99), leaderboard.
 - **Appris :** non supervisé = apprendre la normale, pas la panne ; une anomalie s'isole en peu de coupures ; règle d'or : entraîner sur les sains uniquement. Histogrammes sains/usés très chevauchés (début de panne invisible). p90 : FP 29, FN 241, F1 macro 0,663 ; p99 : FP 2, FN 444. Rappel 0,485 (p95) contre 0,951 pour la Random Forest ; PR-AUC 0,915 identique pour tous les seuils. Utile pour les pannes jamais vues → motivation de l'autoencodeur (module 5).
 - **Bloquant :** rien. Piège retenu : score_samples renvoie « plus grand = plus normal » → on inverse le signe.
+
+---
+
+- **Fait :** module metier.py (alertes_confirmees, avance_alerte, fausses_alarmes, bilan_flotte, resume_flotte) + 7 tests ; notebook AeroGuard_27_metier : bilan par moteur des 3 meilleurs modèles avec k = 1 et k = 3, graphique d'avance par moteur, leaderboard_metier.csv.
+- **Appris :** compter des moteurs, pas des vols : les 11 moteurs de validation sont détectés par tous les modèles, même l'Isolation Forest. Au classement par avance, la Random Forest passe devant (51,0 vols) mais avec 73 fausses alarmes. k = 3 : −3 vols d'avance et −77 % de fausses alarmes pour la logistique, mais −17 vols pour l'Isolation Forest (alertes intermittentes). Choix : logistique k = 3 → 11/11 moteurs, 46,1 vols d'avance, 9 fausses alarmes. Moteurs prévenus tard par tous : DS03_4, DS08c_5.
+- **Bloquant :** colonne `unit` utilisée au lieu de `moteur` → moteurs de fichiers différents fusionnés (6 au lieu de 11). Corrigé + assert de contrôle. Leçon : toujours vérifier un chiffre connu avant d'interpréter.
