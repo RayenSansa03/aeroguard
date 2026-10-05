@@ -89,3 +89,9 @@
 - **Fait :** fonction poids_classes() dans donnees_ml.py + 6 tests (dont comparaison avec sklearn) ; notebook AeroGuard_24_desequilibre (logistique avec et sans class_weight="balanced") ; docs/baselines.md rédigé.
 - **Appris :** chez nous la classe rare est « sain » ; le modèle bête a 70 % d'exactitude et 0 % de sains reconnus. Balanced : FP 39 → 13 mais FN 39 → 73, F1 macro 0,886 → 0,882 → on ne le garde pas. Pondérer déplace surtout le seuil : la PR-AUC ne bouge pas.
 - **Bloquant :** FP/FN absents du leaderboard pour la ligne balanced → ajouter "fp" et "fn" aux clés enregistrées.
+
+---
+
+- **Fait :** module explication.py (decrire_feature, importances_triees) + 5 tests ; notebook AeroGuard_25_random_forest : arbre de profondeur 3, courbe de surapprentissage, Random Forest 200 arbres, top 10 des features, leaderboard.
+- **Appris :** un arbre = suite de questions oui/non ; 1re question = T48_mean_montee <= 1,255 (turbines), puis P21 (fan). Surapprentissage : profondeur None → train 1,000 mais val 0,787 ; meilleur arbre seul = profondeur 2 (val 0,851). Random Forest : F1 macro 0,844 < logistique 0,886 ; FN 28 (au lieu de 39) mais FP 73 (au lieu de 39) ; PR-AUC presque égale (0,985) → le problème vient surtout du seuil. Top features : T48 et T50 (turbines), puis T24 et Nc. Pas besoin de StandardScaler pour les arbres.
+- **Bloquant :** rien.
