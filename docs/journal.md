@@ -129,4 +129,11 @@
 ---
 
 - **Fait :** proposer_reglages_xgb (modeles.py) + 2 tests avec FixedTrial, optuna ajouté aux dépendances ; notebook AeroGuard_34_optuna : courbe max_depth, validation croisée groupée par moteur (StratifiedGroupKFold, 5 plis), recherche Optuna de 40 essais sur GPU (8,5 min), verdict sur la validation, enquête « raccourci fichier ».
-- **Appris :** train à 1,000 dès max_depth 4, meilleure validation à max_depth 3 (0,743). CV : logistique 0,571 ± 0,090, XGBoost 0,521 ± 0,050 (notes CV basses car familles absentes de certains plis). Optuna : 0,530 (+0,009), arbres petits (profondeur 3) et feuilles grandes
+- **Appris :** train à 1,000 dès max_depth 4, meilleure validation à max_depth 3 (0,743). CV : logistique 0,571 ± 0,090, XGBoost 0,521 ± 0,050 (notes CV basses car familles absentes de certains plis). Optuna : 0,530 (+0,009), arbres petits (profondeur 3) et feuilles grandes (min_child_weight 9,8), colsample_bytree = réglage le plus important. Validation : XGBoost réglé 0,726 contre logistique 0,829 (11/11) → aucun réglage ne compense le manque de moteurs. ⚠️ Le fichier NASA se devine à 56,5 % (hasard 18 %) à partir des vols sains : signature du fichier dans les features, et famille = fichier → le diagnostic peut prendre un raccourci. À vérifier avec SHAP (3.5) ; limite du dataset à documenter.
+- **Bloquant :** commit annulé par end-of-file-fixer sur requirements.txt ; tests sautés (ss) car optuna absent du venv → pip install optuna.
+
+---
+
+- **Fait :** importance_par_capteur et expliquer_vol (explication.py) + 3 tests ; notebook AeroGuard_35_shap : SHAP calculé par XGBoost sur GPU (GPUTreeShap), explication globale et locale de l'alerte, carte des capteurs par famille (XGBoost et logistique), enquête raccourci (Spearman).
+- **Appris :** SHAP sur GPU 0,17 s contre 1,99 s sur CPU (×11,7) ; départ + somme des SHAP = score (écart 1e-5). Alerte : T50 et T48 en montée dominent (signature turbine), même histoire que la Random Forest mais partage équitable. Alerte DS01_1 au vol 37 (RUL 63, 91 %) car T50 montée +0,77, T50 croisière +0,47, T48 montée +0,35. Diagnostic : T48 ≈ 0 car il ne distingue pas les familles de turbines ; la logistique est plus physique (fan = P15/P21/P24) que XGBoost (fan = T24 62 %). Enquête : Spearman 0,13 (pas de ressemblance globale) mais P2, capteur n° 1 du détecteur de fichier, est utilisé par le diagnostic → surtout physique, avec un raccourci identifié via P2.
+- **Bloquant :** ImportError importance_par_capteur dans Colab → réinstaller le package puis redémarrer la session.
