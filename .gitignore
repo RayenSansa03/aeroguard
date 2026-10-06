@@ -25,3 +25,6 @@ htmlcov/
 
 mlflow/
 mlruns/
+mlflow/
+mlruns/
+mlartifacts/
