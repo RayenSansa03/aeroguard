@@ -88,6 +88,26 @@ Six modèles comparés sur **11 moteurs de validation jamais vus** à l'entraîn
 
 Détail de toutes les expériences : [`docs/baselines.md`](docs/baselines.md).
 
+## ⚡ v3 — XGBoost sur GPU
+
+Évaluation finale, une seule fois, sur **39 moteurs de test jamais vus** (réglages figés sur la validation).
+
+**Alerte « ce moteur s'use »** (alerte confirmée sur 3 vols)
+
+| Modèle                           | Moteurs prévenus | Avance moyenne             | Fausses alarmes    |
+| -------------------------------- | ---------------- | -------------------------- | ------------------ |
+| Régression logistique (v2)       | 39 / 39          | 44,7 vols                  | 54 (12 moteurs)    |
+| **XGBoost GPU, seuil 0,81 (v3)** | **39 / 39**      | **40 vols avant la panne** | **28 (4 moteurs)** |
+
+**Diagnostic « quel composant ? »** (7 familles de panne) : 37 moteurs sur 39 bien diagnostiqués par XGBoost, 35 / 39 par la logistique.
+
+**Face à une panne jamais vue** (une famille retirée de l'entraînement) :
+
+- l'alerte détecte encore tous les moteurs pour 6 familles sur 7, mais devient presque aveugle à une panne de fan (2 moteurs sur 4 prévenus) ;
+- le diagnostic se trompe alors avec ~90 % de confiance : un modèle supervisé ne sait pas dire « inconnu ». C'est la motivation de l'autoencodeur (v5).
+
+**Vitesse** : sur 371 600 vols, l'entraînement XGBoost est **4,3 fois plus rapide sur GPU** (12 s contre 53 s sur CPU).
+
 ## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
 
 Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
@@ -120,22 +140,22 @@ results/         graphiques et résultats
 docs/            documentation, baselines et journal de bord
 ```
 
-| Module             | Rôle                                                   |
-| ------------------ | ------------------------------------------------------ |
-| `simulation.py`    | Flotte simulée (v0)                                    |
-| `detection.py`     | Baseline par score z et confirmation des alarmes       |
-| `data.py`          | Lecture des fichiers HDF5 N-CMAPSS, étiquettes         |
-| `normalisation.py` | Modèle du moteur sain et résidus                       |
-| `features.py`      | Phases de vol et 126 features par vol                  |
-| `decoupage.py`     | Découpage train / val / test par moteur, sans fuite    |
-| `pipeline.py`      | Pipeline complet d'un fichier                          |
-| `outils.py`        | Chronométrage                                          |
+| Module             | Rôle                                                           |
+| ------------------ | -------------------------------------------------------------- |
+| `simulation.py`    | Flotte simulée (v0)                                            |
+| `detection.py`     | Baseline par score z et confirmation des alarmes               |
+| `data.py`          | Lecture des fichiers HDF5 N-CMAPSS, étiquettes                 |
+| `normalisation.py` | Modèle du moteur sain et résidus                               |
+| `features.py`      | Phases de vol et 126 features par vol                          |
+| `decoupage.py`     | Découpage train / val / test par moteur, sans fuite            |
+| `pipeline.py`      | Pipeline complet d'un fichier                                  |
+| `outils.py`        | Chronométrage                                                  |
 | `donnees_ml.py`    | Préparation de X / y (alerte et diagnostic), poids des classes |
-| `evaluation.py`    | Seuil de décision, métriques, leaderboard              |
-| `explication.py`   | Noms de features lisibles, importances, explications SHAP |
-| `modeles.py`       | XGBoost (GPU), seuil optimal, espace de recherche Optuna |
-| `anomalies.py`     | Détection non supervisée (score, seuil par percentile) |
-| `metier.py`        | Avance d'alerte, fausses alarmes, diagnostic par moteur |
+| `evaluation.py`    | Seuil de décision, métriques, leaderboard                      |
+| `explication.py`   | Noms de features lisibles, importances, explications SHAP      |
+| `modeles.py`       | XGBoost (GPU), seuil optimal, espace de recherche Optuna       |
+| `anomalies.py`     | Détection non supervisée (score, seuil par percentile)         |
+| `metier.py`        | Avance d'alerte, fausses alarmes, diagnostic par moteur        |
 
 ## Installation (Windows)
 
@@ -172,8 +192,7 @@ Prochainement : TensorFlow · MLflow · FastAPI · NVIDIA Triton
 - [x] **v0 — Fondations** : environnement, détection par score z, simulateur, tests, Docker, CI
 - [x] **v1 — Données NASA N-CMAPSS** : 9 fichiers, 99 moteurs, 7 473 vols, 126 features, découpage sans fuite
 - [x] **v2 — Baselines et métriques** : 6 modèles, F1 macro, métriques métier par moteur
-- [ ] **v3 — XGBoost sur GPU** *(en cours)* : alerte et diagnostic du composant, réglages Optuna, explications SHAP
-- [ ] v4 — Deep learning (1D-CNN)
+- [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue- [ ] v4 — Deep learning (1D-CNN)
 - [ ] v5 — Autoencodeur : pannes inconnues
 - [ ] v6 — GAN : cas rares
 - [ ] v7 — Application complète (Triton, API, dashboard)
