@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Librairies Python (requirements.txt, requirements-dev.txt, pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-mineures:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Actions GitHub utilisées dans la CI (checkout, setup-python...)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Image de base du Dockerfile
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
