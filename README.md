@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/RayenSansa03/aeroguard/branch/main/graph/badge.svg)](https://codecov.io/gh/RayenSansa03/aeroguard)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
-
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/RayenSansa03/aeroguard/network/updates)
 Système de détection d'anomalies pour une flotte de moteurs d'avion, construit sur les données NASA N-CMAPSS et accéléré par GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
 
 ## Objectifs
@@ -61,21 +61,21 @@ Six modèles comparés sur **11 moteurs de validation jamais vus** à l'entraîn
 
 **Par vol**
 
-| Modèle | F1 macro | PR-AUC | Rappel | Fausses alarmes | Pannes ratées |
-| --- | --- | --- | --- | --- | --- |
-| **Régression logistique** | **0,886** | 0,987 | 0,932 | 39 | 39 |
-| Random Forest | 0,844 | 0,985 | **0,951** | 73 | **28** |
-| KNN | 0,763 | 0,903 | 0,843 | 75 | 90 |
-| Isolation Forest (non supervisé) | 0,663 | 0,915 | 0,581 | 29 | 241 |
-| Modèle naïf (référence) | 0,412 | 0,702 | 1,000 | 244 | 0 |
+| Modèle                           | F1 macro  | PR-AUC | Rappel    | Fausses alarmes | Pannes ratées |
+| -------------------------------- | --------- | ------ | --------- | --------------- | ------------- |
+| **Régression logistique**        | **0,886** | 0,987  | 0,932     | 39              | 39            |
+| Random Forest                    | 0,844     | 0,985  | **0,951** | 73              | **28**        |
+| KNN                              | 0,763     | 0,903  | 0,843     | 75              | 90            |
+| Isolation Forest (non supervisé) | 0,663     | 0,915  | 0,581     | 29              | 241           |
+| Modèle naïf (référence)          | 0,412     | 0,702  | 1,000     | 244             | 0             |
 
 **Par moteur** (ce qui compte pour une compagnie aérienne), alerte confirmée sur 3 vols consécutifs
 
-| Modèle | Moteurs prévenus | Avance moyenne | Fausses alarmes |
-| --- | --- | --- | --- |
-| **Régression logistique** | **11 / 11** | **46 vols avant la panne** | **9** |
-| Random Forest | 11 / 11 | 48 vols | 31 |
-| Isolation Forest | 11 / 11 | 25 vols | 3 |
+| Modèle                    | Moteurs prévenus | Avance moyenne             | Fausses alarmes |
+| ------------------------- | ---------------- | -------------------------- | --------------- |
+| **Régression logistique** | **11 / 11**      | **46 vols avant la panne** | **9**           |
+| Random Forest             | 11 / 11          | 48 vols                    | 31              |
+| Isolation Forest          | 11 / 11          | 25 vols                    | 3               |
 
 **Modèle retenu :** régression logistique avec confirmation sur 3 vols. Elle prévient pour tous les moteurs, environ 46 vols avant la panne, avec 3 fois moins de fausses alarmes que la Random Forest.
 
@@ -98,21 +98,21 @@ results/         graphiques et résultats
 docs/            documentation, baselines et journal de bord
 ```
 
-| Module | Rôle |
-| --- | --- |
-| `simulation.py` | Flotte simulée (v0) |
-| `detection.py` | Baseline par score z et confirmation des alarmes |
-| `data.py` | Lecture des fichiers HDF5 N-CMAPSS, étiquettes |
-| `normalisation.py` | Modèle du moteur sain et résidus |
-| `features.py` | Phases de vol et 126 features par vol |
-| `decoupage.py` | Découpage train / val / test par moteur, sans fuite |
-| `pipeline.py` | Pipeline complet d'un fichier |
-| `outils.py` | Chronométrage |
-| `donnees_ml.py` | Préparation de X / y, poids des classes |
-| `evaluation.py` | Seuil de décision, métriques, leaderboard |
-| `explication.py` | Noms de features lisibles, importances |
-| `anomalies.py` | Détection non supervisée (score, seuil par percentile) |
-| `metier.py` | Avance d'alerte et fausses alarmes par moteur |
+| Module             | Rôle                                                   |
+| ------------------ | ------------------------------------------------------ |
+| `simulation.py`    | Flotte simulée (v0)                                    |
+| `detection.py`     | Baseline par score z et confirmation des alarmes       |
+| `data.py`          | Lecture des fichiers HDF5 N-CMAPSS, étiquettes         |
+| `normalisation.py` | Modèle du moteur sain et résidus                       |
+| `features.py`      | Phases de vol et 126 features par vol                  |
+| `decoupage.py`     | Découpage train / val / test par moteur, sans fuite    |
+| `pipeline.py`      | Pipeline complet d'un fichier                          |
+| `outils.py`        | Chronométrage                                          |
+| `donnees_ml.py`    | Préparation de X / y, poids des classes                |
+| `evaluation.py`    | Seuil de décision, métriques, leaderboard              |
+| `explication.py`   | Noms de features lisibles, importances                 |
+| `anomalies.py`     | Détection non supervisée (score, seuil par percentile) |
+| `metier.py`        | Avance d'alerte et fausses alarmes par moteur          |
 
 ## Installation (Windows)
 
