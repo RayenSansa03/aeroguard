@@ -56,7 +56,6 @@ Poids balanced : sain 1,695 ; usé 0,709
 - Le non supervisé (Isolation Forest) prévient tous les moteurs mais tard (24,8 vols avec k = 3).
 - Points à creuser : moteurs prévenus tard (DS03_4, DS08c_5) et pannes hors turbines.
 
-
 ## Limite connue : famille de panne et fichier NASA
 
 - Chaque famille de panne provient d'un seul fichier N-CMAPSS (DS01 → HPT, DS04 → fan, etc.).
@@ -66,3 +65,38 @@ Poids balanced : sain 1,695 ; usé 0,709
 - SHAP (leçon 3.5) : le diagnostic s'appuie surtout sur les capteurs physiques (P24, T30, Nc, T50),
   sans ressemblance globale avec le détecteur de fichier (Spearman 0,13), mais il utilise P2
   (pression d'entrée, n° 1 du détecteur de fichier). Piste : réentraîner sans les features de P2.
+
+## Module 3 — XGBoost sur GPU (v3) : évaluation finale sur le test (39 moteurs)
+
+Configuration figée sur la validation, évaluée une seule fois sur le test.
+
+### Alerte (k = 3)
+
+| Modèle                   | Moteurs prévenus | Avance moyenne | Fausses alarmes    | F1 macro | PR-AUC |
+| ------------------------ | ---------------- | -------------- | ------------------ | -------- | ------ |
+| Logistique (seuil 0,5)   | 39 / 39          | 44,7 vols      | 54 (12 moteurs)    | 0,840    | 0,978  |
+| **XGBoost (seuil 0,81)** | **39 / 39**      | 40,1 vols      | **28 (4 moteurs)** | 0,852    | 0,978  |
+
+Modèle d'alerte retenu : **XGBoost, seuil 0,81, k = 3** (fausses alarmes divisées par 2 pour 4,6 vols d'avance en moins).
+
+### Diagnostic de la famille de panne
+
+| Modèle           | F1 macro (par vol) | Moteurs bien diagnostiqués |
+| ---------------- | ------------------ | -------------------------- |
+| Logistique       | 0,846              | 35 / 39                    |
+| XGBoost (Optuna) | 0,826              | 37 / 39                    |
+
+### Familles non vues à l'entraînement
+
+- L'alerte détecte encore tous les moteurs pour 6 familles sur 7 ; exception : le fan (rappel 0,78 → 0,22, 2 moteurs sur 4 non prévenus), seule famille signalée par des pressions et non des températures.
+- Le diagnostic prédit alors une famille voisine avec ~90 % de confiance (fan → mixte, 92 %) : il ne sait pas dire « inconnu » → motivation de l'autoencodeur (module 5).
+
+### Vitesse GPU (371 600 vols, 300 arbres)
+
+- Entraînement : 12,4 s (GPU T4) contre 52,8 s (CPU), soit ×4,3.
+- Prédiction : 1,74 s (GPU) contre 1,47 s (CPU) : la copie des données CPU → GPU coûte plus que le calcul.
+
+### Remarques
+
+- 30 vols du test (moteur DS02_14) ont des valeurs manquantes (phase de montée) : imputation par la médiane du train pour la logistique.
+- Rappel de la limite connue : famille de panne = fichier NASA → scores de diagnostic probablement optimistes pour une flotte nouvelle.
