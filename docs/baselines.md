@@ -55,6 +55,14 @@ Poids balanced : sain 1,695 ; usé 0,709
   (F1 macro 0,886 ; 11/11 moteurs ; 46,1 vols d'avance ; 9 fausses alarmes).
 - Le non supervisé (Isolation Forest) prévient tous les moteurs mais tard (24,8 vols avec k = 3).
 - Points à creuser : moteurs prévenus tard (DS03_4, DS08c_5) et pannes hors turbines.
+
+
+## Limite connue : famille de panne et fichier NASA
+
+- Chaque famille de panne provient d'un seul fichier N-CMAPSS (DS01 → HPT, DS04 → fan, etc.).
+- Depuis les vols SAINS, une logistique devine le fichier à 56,5 % (hasard 18 %) : les features portent une signature du fichier.
+- Le diagnostic de famille peut donc s'appuyer en partie sur le fichier plutôt que sur la panne ; ses scores sont probablement optimistes pour une flotte nouvelle.
+- Vérification prévue : SHAP (leçon 3.5).
 - SHAP (leçon 3.5) : le diagnostic s'appuie surtout sur les capteurs physiques (P24, T30, Nc, T50),
   sans ressemblance globale avec le détecteur de fichier (Spearman 0,13), mais il utilise P2
   (pression d'entrée, n° 1 du détecteur de fichier). Piste : réentraîner sans les features de P2.
