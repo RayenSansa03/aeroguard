@@ -34,3 +34,11 @@ def poids_classes(y):
             raise ValueError(f"La classe {classe} est absente : impossible de calculer son poids.")
         poids[classe] = n / (2 * n_classe)
     return poids
+
+
+def preparer_xy_famille(vols, groupe, col_famille="famille"):
+    """X et la famille de panne, pour les vols USÉS d'un groupe (diagnostic du composant)."""
+    sous = vols[(vols["groupe"] == groupe) & (vols["hs"] == 0)]
+    X = sous[colonnes_features(vols)]
+    y = sous[col_famille].astype(str)
+    return X, y

@@ -54,3 +54,9 @@ def resume_flotte(bilan):
         "moteurs_avec_fausse_alarme": int((bilan["fausses_alarmes"] > 0).sum()),
         "fausses_alarmes_total": int(bilan["fausses_alarmes"].sum()),
     }
+
+
+def diagnostic_par_moteur(moteurs, predictions):
+    """Pour chaque moteur, la famille prédite le plus souvent sur ses vols (vote majoritaire)."""
+    table = pd.DataFrame({"moteur": list(moteurs), "prediction": list(predictions)})
+    return table.groupby("moteur")["prediction"].agg(lambda s: s.value_counts().idxmax())
