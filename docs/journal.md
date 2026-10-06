@@ -125,3 +125,8 @@
 - **Fait :** preparer_xy_famille (donnees_ml.py) et diagnostic_par_moteur (metier.py) + 3 tests ; notebook AeroGuard_33_diagnostic : XGBoost multi-classe (multi:softprob) sur GPU contre logistique multi-classe, 7 familles, vols usés seulement, pondération des familles, vote par moteur.
 - **Appris :** 7 familles, 5 à 12 moteurs par famille au train, 1 seul moteur en validation pour 5 familles → scores par famille fragiles. Surprise : la logistique gagne (F1 macro 0,829 contre 0,721 ; 11/11 moteurs contre 9/11). Confusions physiquement logiques : LPT ↔ HPT+LPT (43 % / 30 %) et HPC ↔ LPC+HPC (26 % / 21 %), jamais fan ↔ turbine ; fan et HPT reconnus à 100 %. Le vote par moteur corrige les erreurs dispersées, pas les confusions systématiques. Hypothèses : XGBoost surapprend avec trop peu de moteurs ; réglages non adaptés (→ 3.4) ; famille = fichier NASA → risque de raccourci (→ vérifier avec SHAP en 3.5).
 - **Bloquant :** cellule de sauvegarde dupliquée par erreur → relancée.
+
+---
+
+- **Fait :** proposer_reglages_xgb (modeles.py) + 2 tests avec FixedTrial, optuna ajouté aux dépendances ; notebook AeroGuard_34_optuna : courbe max_depth, validation croisée groupée par moteur (StratifiedGroupKFold, 5 plis), recherche Optuna de 40 essais sur GPU (8,5 min), verdict sur la validation, enquête « raccourci fichier ».
+- **Appris :** train à 1,000 dès max_depth 4, meilleure validation à max_depth 3 (0,743). CV : logistique 0,571 ± 0,090, XGBoost 0,521 ± 0,050 (notes CV basses car familles absentes de certains plis). Optuna : 0,530 (+0,009), arbres petits (profondeur 3) et feuilles grandes
