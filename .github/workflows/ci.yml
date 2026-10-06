@@ -33,7 +33,7 @@ jobs:
       - run: pytest --cov=aeroguard --cov-report=xml
       - name: Envoyer la couverture à Codecov (une seule fois)
         if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
