@@ -5,6 +5,7 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/RayenSansa03/aeroguard/network/updates)
+
 Système de détection d'anomalies pour une flotte de moteurs d'avion, construit sur les données NASA N-CMAPSS et accéléré par GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
 
 ## Objectifs
@@ -87,6 +88,27 @@ Six modèles comparés sur **11 moteurs de validation jamais vus** à l'entraîn
 
 Détail de toutes les expériences : [`docs/baselines.md`](docs/baselines.md).
 
+## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
+
+Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
+
+**Ce qui déclenche une alerte** — les températures autour des turbines (T50, T48) pendant la montée dominent, exactement la signature physique d'une turbine usée :
+
+![Importance SHAP par capteur](results/figures/35_shap_par_capteur.png)
+
+**Le sens de l'effet** — chaque point est un vol ; une température T48/T50 élevée (en rouge) pousse vers « usé » :
+
+![Nuage SHAP](results/figures/35_shap_nuage.png)
+
+**Exemple d'alerte expliquée** — moteur DS01_1, vol 37, 63 vols avant la panne (probabilité 91 %) :
+alerte car T50 en montée (+0,77), T50 en croisière (+0,47) et T48 en montée (+0,35).
+
+**Diagnostic du composant** — part de chaque capteur dans la décision, pour chaque famille de panne :
+
+![Capteurs utilisés par famille](results/figures/35_shap_diagnostic_familles.png)
+
+> **Limite identifiée grâce à SHAP :** chaque famille de panne provient d'un seul fichier NASA, et une partie du diagnostic passe par P2 (pression d'entrée), un capteur qui révèle le fichier plutôt que la panne. Le diagnostic reste surtout physique (P24, T30, Nc, T50), mais ses scores sont probablement optimistes pour une flotte nouvelle. Détails dans [`docs/baselines.md`](docs/baselines.md).
+
 ## Structure du projet
 
 ```
@@ -108,11 +130,12 @@ docs/            documentation, baselines et journal de bord
 | `decoupage.py`     | Découpage train / val / test par moteur, sans fuite    |
 | `pipeline.py`      | Pipeline complet d'un fichier                          |
 | `outils.py`        | Chronométrage                                          |
-| `donnees_ml.py`    | Préparation de X / y, poids des classes                |
+| `donnees_ml.py`    | Préparation de X / y (alerte et diagnostic), poids des classes |
 | `evaluation.py`    | Seuil de décision, métriques, leaderboard              |
-| `explication.py`   | Noms de features lisibles, importances                 |
+| `explication.py`   | Noms de features lisibles, importances, explications SHAP |
+| `modeles.py`       | XGBoost (GPU), seuil optimal, espace de recherche Optuna |
 | `anomalies.py`     | Détection non supervisée (score, seuil par percentile) |
-| `metier.py`        | Avance d'alerte et fausses alarmes par moteur          |
+| `metier.py`        | Avance d'alerte, fausses alarmes, diagnostic par moteur |
 
 ## Installation (Windows)
 
@@ -140,16 +163,16 @@ docker run --rm aeroguard:v0 pytest -v    # tests
 
 ## Technologies
 
-Python · NumPy · pandas · Matplotlib · scikit-learn · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov
+Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot
 
-Prochainement : XGBoost (GPU) · TensorFlow · MLflow · FastAPI · NVIDIA Triton
+Prochainement : TensorFlow · MLflow · FastAPI · NVIDIA Triton
 
 ## Feuille de route
 
 - [x] **v0 — Fondations** : environnement, détection par score z, simulateur, tests, Docker, CI
 - [x] **v1 — Données NASA N-CMAPSS** : 9 fichiers, 99 moteurs, 7 473 vols, 126 features, découpage sans fuite
 - [x] **v2 — Baselines et métriques** : 6 modèles, F1 macro, métriques métier par moteur
-- [ ] v3 — XGBoost sur GPU
+- [ ] **v3 — XGBoost sur GPU** *(en cours)* : alerte et diagnostic du composant, réglages Optuna, explications SHAP
 - [ ] v4 — Deep learning (1D-CNN)
 - [ ] v5 — Autoencodeur : pannes inconnues
 - [ ] v6 — GAN : cas rares
