@@ -60,3 +60,22 @@ def diagnostic_par_moteur(moteurs, predictions):
     """Pour chaque moteur, la famille prédite le plus souvent sur ses vols (vote majoritaire)."""
     table = pd.DataFrame({"moteur": list(moteurs), "prediction": list(predictions)})
     return table.groupby("moteur")["prediction"].agg(lambda s: s.value_counts().idxmax())
+
+
+def evaluer_alerte(
+    y_vrai, probas, seuil, infos, k=3, col_moteur="moteur", col_ordre="cycle", col_rul="RUL"
+):
+    """Bilan complet d'une alerte : scores par vol + bilan par moteur (avance, fausses alarmes).
+
+    `infos` contient une ligne par vol, dans le même ordre que `y_vrai` et `probas`,
+    avec les colonnes moteur, ordre (cycle) et RUL.
+    """
+    from aeroguard.evaluation import appliquer_seuil, metriques
+
+    alerte = appliquer_seuil(probas, seuil)
+    scores = metriques(y_vrai, alerte, probas)
+    table = infos[[col_moteur, col_ordre, col_rul]].copy()
+    table["y"] = list(y_vrai)
+    table["alerte"] = alerte
+    bilan = bilan_flotte(table, col_moteur, col_ordre, col_rul, k=k)
+    return {**scores, **resume_flotte(bilan)}
