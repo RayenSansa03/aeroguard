@@ -113,3 +113,9 @@
 - **Fait :** notebook AeroGuard_31_boosting : boosting fait main (arbres de profondeur 3 qui apprennent les erreurs), comparaison η = 0,1 / η = 1,0, test de HistGradientBoostingClassifier.
 - **Appris :** forêt = arbres en parallèle qui votent ; boosting = petits arbres en série qui corrigent les erreurs restantes, prédiction = somme. Exemple à la main : erreur 40 → 20 → 10 → 5 avec η = 0,5. Avec 1 arbre, F1 macro = 0,412 (= modèle naïf) ; η = 0,1 plafonne à 0,850 vers 100 arbres puis baisse un peu ; η = 1,0 : erreur train 0,04 mais validation qui chute vers 0,79 → surapprentissage. HistGradientBoosting : F1 macro 0,846, PR-AUC 0,984, meilleur rappel (0,962, 22 pannes ratées) mais 76 fausses alarmes ; ne bat pas la logistique (0,886).
 - **Bloquant :** rien.
+
+---
+
+- **Fait :** modeles.py (creer_xgboost, seuil_optimal) + 4 tests, xgboost ajouté aux dépendances ; notebook AeroGuard_32_xgboost_gpu : XGBoost sur GPU Tesla T4 avec early stopping, seuil optimal, métriques métier, modèle sauvegardé (models/xgb_binaire_v3.json).
+- **Appris :** device="cuda" + tree_method="hist" ; entraînement en 2,0 s ; early stopping à 411 arbres sur 2 000 (PR-AUC val 0,9867, train 1,000 = par cœur). Seuil optimal 0,81 : F1 macro 0,865 → 0,885, FP 67 → 27, FN 20 → 54. XGBoost bat la Random Forest et égale la logistique (PR-AUC 0,987 tous les deux) : les résidus ont rendu le problème presque linéaire. Métier k = 3 : XGBoost 0,81 → 11/11 moteurs, 42,5 vols d'avance, seulement 2 fausses alarmes. Seuil choisi sur la validation = score optimiste → décision finale sur le test en 3.6.
+- **Bloquant :** notebook d'abord lancé en CPU (nvidia-smi introuvable) → passer le type d'exécution en T4 GPU.
