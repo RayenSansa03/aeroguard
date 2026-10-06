@@ -17,3 +17,5 @@ scikit-learn>=1.5
 h5py>=3.11
 
 xgboost>=2.0
+
+optuna>=3.6

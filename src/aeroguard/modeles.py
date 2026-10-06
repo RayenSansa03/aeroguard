@@ -34,3 +34,16 @@ def seuil_optimal(y_vrai, probas, seuils=None):
     ]
     meilleur = int(np.argmax(scores))
     return float(seuils[meilleur]), float(scores[meilleur])
+
+
+def proposer_reglages_xgb(trial):
+    """L'espace de recherche d'Optuna pour XGBoost : un réglage proposé par essai."""
+    return {
+        "max_depth": trial.suggest_int("max_depth", 2, 8),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+        "n_estimators": trial.suggest_int("n_estimators", 100, 600),
+        "min_child_weight": trial.suggest_float("min_child_weight", 1.0, 20.0, log=True),
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.3, 1.0),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
+    }
