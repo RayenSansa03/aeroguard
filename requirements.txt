@@ -19,3 +19,5 @@ h5py>=3.11
 xgboost>=2.0
 
 optuna>=3.6
+
+mlflow>=2.14
