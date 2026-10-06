@@ -119,3 +119,9 @@
 - **Fait :** modeles.py (creer_xgboost, seuil_optimal) + 4 tests, xgboost ajouté aux dépendances ; notebook AeroGuard_32_xgboost_gpu : XGBoost sur GPU Tesla T4 avec early stopping, seuil optimal, métriques métier, modèle sauvegardé (models/xgb_binaire_v3.json).
 - **Appris :** device="cuda" + tree_method="hist" ; entraînement en 2,0 s ; early stopping à 411 arbres sur 2 000 (PR-AUC val 0,9867, train 1,000 = par cœur). Seuil optimal 0,81 : F1 macro 0,865 → 0,885, FP 67 → 27, FN 20 → 54. XGBoost bat la Random Forest et égale la logistique (PR-AUC 0,987 tous les deux) : les résidus ont rendu le problème presque linéaire. Métier k = 3 : XGBoost 0,81 → 11/11 moteurs, 42,5 vols d'avance, seulement 2 fausses alarmes. Seuil choisi sur la validation = score optimiste → décision finale sur le test en 3.6.
 - **Bloquant :** notebook d'abord lancé en CPU (nvidia-smi introuvable) → passer le type d'exécution en T4 GPU.
+
+---
+
+- **Fait :** preparer_xy_famille (donnees_ml.py) et diagnostic_par_moteur (metier.py) + 3 tests ; notebook AeroGuard_33_diagnostic : XGBoost multi-classe (multi:softprob) sur GPU contre logistique multi-classe, 7 familles, vols usés seulement, pondération des familles, vote par moteur.
+- **Appris :** 7 familles, 5 à 12 moteurs par famille au train, 1 seul moteur en validation pour 5 familles → scores par famille fragiles. Surprise : la logistique gagne (F1 macro 0,829 contre 0,721 ; 11/11 moteurs contre 9/11). Confusions physiquement logiques : LPT ↔ HPT+LPT (43 % / 30 %) et HPC ↔ LPC+HPC (26 % / 21 %), jamais fan ↔ turbine ; fan et HPT reconnus à 100 %. Le vote par moteur corrige les erreurs dispersées, pas les confusions systématiques. Hypothèses : XGBoost surapprend avec trop peu de moteurs ; réglages non adaptés (→ 3.4) ; famille = fichier NASA → risque de raccourci (→ vérifier avec SHAP en 3.5).
+- **Bloquant :** cellule de sauvegarde dupliquée par erreur → relancée.
