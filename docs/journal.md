@@ -107,3 +107,9 @@
 - **Fait :** module metier.py (alertes_confirmees, avance_alerte, fausses_alarmes, bilan_flotte, resume_flotte) + 7 tests ; notebook AeroGuard_27_metier : bilan par moteur des 3 meilleurs modèles avec k = 1 et k = 3, graphique d'avance par moteur, leaderboard_metier.csv.
 - **Appris :** compter des moteurs, pas des vols : les 11 moteurs de validation sont détectés par tous les modèles, même l'Isolation Forest. Au classement par avance, la Random Forest passe devant (51,0 vols) mais avec 73 fausses alarmes. k = 3 : −3 vols d'avance et −77 % de fausses alarmes pour la logistique, mais −17 vols pour l'Isolation Forest (alertes intermittentes). Choix : logistique k = 3 → 11/11 moteurs, 46,1 vols d'avance, 9 fausses alarmes. Moteurs prévenus tard par tous : DS03_4, DS08c_5.
 - **Bloquant :** colonne `unit` utilisée au lieu de `moteur` → moteurs de fichiers différents fusionnés (6 au lieu de 11). Corrigé + assert de contrôle. Leçon : toujours vérifier un chiffre connu avant d'interpréter.
+
+---
+
+- **Fait :** notebook AeroGuard_31_boosting : boosting fait main (arbres de profondeur 3 qui apprennent les erreurs), comparaison η = 0,1 / η = 1,0, test de HistGradientBoostingClassifier.
+- **Appris :** forêt = arbres en parallèle qui votent ; boosting = petits arbres en série qui corrigent les erreurs restantes, prédiction = somme. Exemple à la main : erreur 40 → 20 → 10 → 5 avec η = 0,5. Avec 1 arbre, F1 macro = 0,412 (= modèle naïf) ; η = 0,1 plafonne à 0,850 vers 100 arbres puis baisse un peu ; η = 1,0 : erreur train 0,04 mais validation qui chute vers 0,79 → surapprentissage. HistGradientBoosting : F1 macro 0,846, PR-AUC 0,984, meilleur rappel (0,962, 22 pannes ratées) mais 76 fausses alarmes ; ne bat pas la logistique (0,886).
+- **Bloquant :** rien.
