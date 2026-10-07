@@ -143,3 +143,9 @@
 - **Fait :** evaluer_alerte (metier.py) + 1 test ; notebook AeroGuard_36_test_final : configuration figée, évaluation finale unique sur les 39 moteurs de test (alerte et diagnostic), familles de panne non vues à l'entraînement (14 modèles), test de charge CPU/GPU sur 371 600 vols.
 - **Appris :** test final : 39/39 moteurs prévenus par les deux modèles ; logistique 44,7 vols d'avance et 54 fausses alarmes (12 moteurs) ; XGBoost 0,81 40,1 vols et 28 fausses alarmes (4 moteurs) → XGBoost retenu. Baisse modérée validation → test (F1 −0,03 à −0,05) = réglages sains. Diagnostic test : logistique 35/39, XGBoost 37/39 (la validation à 1 moteur par famille était trop petite). Famille non vue : l'alerte tient pour 6 familles sur 7 mais devient aveugle au fan (rappel 0,78 → 0,22, 2/4 moteurs) ; le diagnostic se trompe avec ~90 % de confiance (fan → mixte 92 %) → motivation de l'autoencodeur. GPU : entraînement ×4,3 ; prédiction plus lente (copie CPU → GPU).
 - **Bloquant :** NaN dans 30 vols du test (moteur DS02_14, features de montée) → SimpleImputer(median) appris sur le train pour la logistique ; XGBoost gère les NaN nativement. Package absent après une nouvelle machine Colab → relancer la cellule d'installation.
+
+---
+
+- **Fait :** neurone artificiel codé en NumPy (somme pondérée, ReLU, sigmoïde), testé sur T48 et Wf en montée ; preuve qu'un neurone sigmoïde = une régression logistique.
+- **Appris :** apprendre les poids fait passer le F1 macro de 0,656 (à la main) à 0,755 ; le neurone a appris « chauffer plus que ce que le carburant explique = usure » (poids T48 +8,6, Wf −3,1) ; une seule droite ne sépare pas la zone où sains et usés se mélangent.
+- **Bloquant :** rien.
