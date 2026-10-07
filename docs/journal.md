@@ -161,3 +161,9 @@
 - **Fait :** premier réseau dense Keras (126-64-32-1, 10 241 paramètres) dans `reseaux.py` avec normalisation intégrée, 9 tests ; entraîné sur GPU, comparé à XGBoost et à la logistique dans MLflow ; tests de 5 graines et de 3 architectures.
 - **Appris :** le réseau prévient 11/11 moteurs avec 43,4 vols d'avance mais reste derrière en F1 macro (0,878 en moyenne contre 0,887 et 0,894) ; surapprentissage net après l'époque 17 ; le hasard de la graine fait varier le F1 de 0,020, plus que l'écart entre modèles : il faut comparer des moyennes sur plusieurs graines.
 - **Bloquant :** rien.
+
+---
+
+- **Fait :** dropout et callbacks (EarlyStopping, ReduceLROnPlateau, ModelCheckpoint) ajoutés à `reseaux.py` avec 6 tests ; 4 configurations × 3 graines comparées et tracées dans MLflow.
+- **Appris :** le dropout baisse la perte de validation de 0,290 à 0,272 et stabilise le seuil (0,36 → 0,51 au lieu de 0,39 → 0,92) ; EarlyStopping divise les époques par deux et garde la meilleure ; le F1 macro plafonne vers 0,88 quelle que soit la protection : la limite vient des features tabulaires, pas du surapprentissage.
+- **Bloquant :** ImportError de `creer_callbacks` dans Colab, réglé en redémarrant la session après le merge.
