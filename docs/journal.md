@@ -155,3 +155,9 @@
 - **Fait :** descente de gradient codée en NumPy (sur une droite, puis sur le neurone T48 + Wf d'AeroGuard), rétropropagation vérifiée par différences finies, entraînement par lot complet et par mini-lots de 64.
 - **Appris :** taux 0,001 trop lent, 0,1 à 0,5 idéal, 0,9 fait exploser la perte ; 59 mises à jour par époque en lots de 64 contre 1 en lot complet (perte 0,36 contre 0,48 après 50 époques) ; la log loss punit 460 fois plus une erreur sûre d'elle qu'une bonne réponse.
 - **Bloquant :** rien.
+
+---
+
+- **Fait :** premier réseau dense Keras (126-64-32-1, 10 241 paramètres) dans `reseaux.py` avec normalisation intégrée, 9 tests ; entraîné sur GPU, comparé à XGBoost et à la logistique dans MLflow ; tests de 5 graines et de 3 architectures.
+- **Appris :** le réseau prévient 11/11 moteurs avec 43,4 vols d'avance mais reste derrière en F1 macro (0,878 en moyenne contre 0,887 et 0,894) ; surapprentissage net après l'époque 17 ; le hasard de la graine fait varier le F1 de 0,020, plus que l'écart entre modèles : il faut comparer des moyennes sur plusieurs graines.
+- **Bloquant :** rien.
