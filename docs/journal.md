@@ -149,3 +149,9 @@
 - **Fait :** neurone artificiel codé en NumPy (somme pondérée, ReLU, sigmoïde), testé sur T48 et Wf en montée ; preuve qu'un neurone sigmoïde = une régression logistique.
 - **Appris :** apprendre les poids fait passer le F1 macro de 0,656 (à la main) à 0,755 ; le neurone a appris « chauffer plus que ce que le carburant explique = usure » (poids T48 +8,6, Wf −3,1) ; une seule droite ne sépare pas la zone où sains et usés se mélangent.
 - **Bloquant :** rien.
+
+---
+
+- **Fait :** descente de gradient codée en NumPy (sur une droite, puis sur le neurone T48 + Wf d'AeroGuard), rétropropagation vérifiée par différences finies, entraînement par lot complet et par mini-lots de 64.
+- **Appris :** taux 0,001 trop lent, 0,1 à 0,5 idéal, 0,9 fait exploser la perte ; 59 mises à jour par époque en lots de 64 contre 1 en lot complet (perte 0,36 contre 0,48 après 50 époques) ; la log loss punit 460 fois plus une erreur sûre d'elle qu'une bonne réponse.
+- **Bloquant :** rien.
