@@ -191,3 +191,9 @@
 - **Fait :** module `comparaison.py` (bootstrap par moteur, intervalles de confiance, comparaison appariée) avec 15 tests ; évaluation finale des 4 modèles d'alerte sur les 39 moteurs de test, seuils figés relus dans MLflow ; README et baselines mis à jour pour la v4.
 - **Appris :** on ouvre le test une seule fois et on vérifie qu'on retrouve les anciens chiffres (0,840 et 0,852 identiques à la 3.6) ; un écart de F1 n'est réel que si son intervalle bootstrap exclut 0 (XGBoost contre logistique : non prouvé, départagés par les fausses alarmes) ; il faut tirer des moteurs et non des vols ; le CNN égale XGBoost sur les turbines mais échoue sur le fan (0,288), dont la signature en pression est noyée dans les conditions de vol.
 - **Bloquant :** le fichier de tests n'avait pas été téléchargé ; réglé en le créant directement dans VS Code.
+
+---
+
+- **Fait :** module `registre.py` (inscription d'une version avec description et étiquettes, alias, lecture d'un alias, règle de promotion) avec 7 tests ; registre MLflow `aeroguard-alerte` : logistique en version 1 (@challenger), XGBoost v3 en version 2 (@champion), avec signature, seuil, F1 et intervalle du test, commit du code.
+- **Appris :** un run est une expérience, le registre est le catalogue officiel (versions numérotées et immuables) ; l'application charge `@champion`, donc promotion et retour arrière se font sans toucher au code ; le seuil doit voyager avec le modèle ; on inscrit exactement le modèle testé (test de fumée 0,852 = 0,852) ; `search_model_versions` ne renvoie pas les alias, il faut `get_model_version`.
+- **Bloquant :** ruff format avait annulé le commit (fichiers reformatés) ; réglé en refaisant `git add` puis `git commit`.

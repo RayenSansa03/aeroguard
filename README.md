@@ -126,6 +126,25 @@ Détail de toutes les expériences : [`docs/baselines.md`](docs/baselines.md).
 - Le CNN, qui ne voit que le signal brut, **égale XGBoost sur les pannes de turbine** (HPT+LPT : 0,867 contre 0,857) mais **échoue sur le fan** (0,288 contre 0,777) : la signature du fan est une faible variation de pression, noyée dans les conditions de vol.
 - Leçon : avec 49 moteurs d'entraînement, de bonnes features physiques battent le deep learning. Pistes : plus de fenêtres par vol, entrées en résidus.
 
+## 🗂️ MLOps : registre de modèles MLflow
+
+Le modèle d'alerte de production est désigné dans le **registre MLflow** sous le nom `aeroguard-alerte`, et chargé par son alias, jamais par un nom de fichier :
+
+```python
+modele = mlflow.xgboost.load_model("models:/aeroguard-alerte@champion")
+```
+
+| Version | Alias         | Modèle                | Seuil | F1 macro test [IC 95 %] |
+| ------- | ------------- | --------------------- | ----- | ----------------------- |
+| 2       | **@champion** | XGBoost (v3)          | 0,81  | 0,852 [0,827 ; 0,874]   |
+| 1       | @challenger   | Régression logistique | 0,50  | 0,840 [0,814 ; 0,862]   |
+
+![Registre MLflow](results/figures/D4_registre_mlflow.png)
+
+- Chaque version porte sa **notice** : seuil, confirmation sur 3 vols, score et intervalle de confiance du test, données et commit du code (traçabilité).
+- **Test de fumée** : le champion rechargé depuis le registre redonne exactement F1 = 0,852 sur le test.
+- **Règle de promotion** : un challenger ne devient champion que s'il bat le champion de façon prouvée (bootstrap par moteur). Promotion et retour
+
 ## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
 
 Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
@@ -201,7 +220,7 @@ docker run --rm aeroguard:v0 pytest -v    # tests
 
 ## Technologies
 
-Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot  TensorFlow / Keras · MLflow
+Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot TensorFlow / Keras · MLflow
 
 Prochainement : FastAPI · NVIDIA Triton
 
