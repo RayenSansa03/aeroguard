@@ -1,9 +1,11 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from aeroguard.sequences import (
     CAPTEURS,
     CONDITIONS_VOL,
+    agreger_par_vol,
     creer_dataset,
     decouper_fenetres,
     extraire_fenetres,
@@ -85,3 +87,28 @@ def test_creer_dataset_lots():
     assert np.array_equal(lots[0][1].numpy(), [0, 1, 2, 3])
     lots_melanges = list(creer_dataset(X, y, taille_lot=10, melanger=True))
     assert sorted(lots_melanges[0][1].numpy()) == list(range(10))
+
+
+def test_agreger_par_vol_moyenne_et_ordre():
+    infos = pd.DataFrame(
+        {
+            "moteur": ["B", "B", "A", "A", "A", "A"],
+            "cycle": [1, 1, 2, 2, 1, 1],
+            "usure": [0, 0, 1, 1, 0, 0],
+            "RUL": [5, 5, 1, 1, 2, 2],
+        },
+        index=[10, 11, 12, 13, 14, 15],
+    )
+    par_vol = agreger_par_vol(infos, [0.1, 0.3, 0.8, 1.0, 0.2, 0.4])
+    assert list(par_vol["moteur"]) == ["A", "A", "B"]
+    assert list(par_vol["cycle"]) == [1, 2, 1]
+    assert np.allclose(par_vol["proba"], [0.3, 0.9, 0.2])
+    assert list(par_vol["usure"]) == [0, 1, 0]
+
+
+def test_agreger_par_vol_tailles_differentes():
+    import pandas as pd
+
+    infos = pd.DataFrame({"moteur": ["A"], "cycle": [1], "usure": [0], "RUL": [3]})
+    with pytest.raises(ValueError, match="même nombre"):
+        agreger_par_vol(infos, [0.1, 0.2])

@@ -79,6 +79,55 @@ def creer_callbacks(
     return callbacks
 
 
+def creer_cnn_1d(
+    longueur,
+    nombre_canaux,
+    filtres=(32, 64, 64),
+    taille_noyau=7,
+    taux_dropout=0.3,
+    taux_apprentissage=1e-3,
+    graine=42,
+):
+    """1D-CNN d'alerte : fenêtre (temps, canaux) → convolutions → probabilité d'usure."""
+    from tensorflow import keras
+
+    if longueur < 1 or nombre_canaux < 1:
+        raise ValueError("longueur et nombre_canaux doivent être supérieurs ou égaux à 1.")
+    if not filtres:
+        raise ValueError("filtres doit contenir au moins une couche.")
+    if taille_noyau < 1:
+        raise ValueError("taille_noyau doit être supérieure ou égale à 1.")
+    if not 0 <= taux_dropout < 1:
+        raise ValueError("taux_dropout doit être compris entre 0 (inclus) et 1 (exclu).")
+    keras.utils.set_random_seed(graine)
+
+    couches = [keras.Input(shape=(longueur, nombre_canaux), name="fenetre_vol")]
+    for numero, nombre_filtres in enumerate(filtres, start=1):
+        couches.append(
+            keras.layers.Conv1D(
+                nombre_filtres,
+                taille_noyau,
+                padding="same",
+                activation="relu",
+                name=f"conv_{numero}",
+            )
+        )
+        if numero < len(filtres):
+            couches.append(keras.layers.MaxPooling1D(2, name=f"pool_{numero}"))
+    couches.append(keras.layers.GlobalAveragePooling1D(name="moyenne_globale"))
+    if taux_dropout > 0:
+        couches.append(keras.layers.Dropout(taux_dropout, name="dropout"))
+    couches.append(keras.layers.Dense(1, activation="sigmoid", name="proba_usure"))
+
+    modele = keras.Sequential(couches, name="aeroguard_cnn_1d")
+    modele.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=taux_apprentissage),
+        loss="binary_crossentropy",
+        metrics=[keras.metrics.AUC(curve="PR", name="pr_auc")],
+    )
+    return modele
+
+
 def nombre_parametres_entrainables(modele):
     """Nombre de poids et de biais que l'entraînement modifie."""
     return int(sum(np.prod(poids.shape) for poids in modele.trainable_weights))

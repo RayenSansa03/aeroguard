@@ -70,3 +70,27 @@ def creer_dataset(X, y, taille_lot=256, melanger=True, graine=42):
     if melanger:
         dataset = dataset.shuffle(min(len(X), 10_000), seed=graine)
     return dataset.batch(taille_lot).prefetch(tf.data.AUTOTUNE)
+
+
+def agreger_par_vol(infos, probas, col_moteur="moteur", col_cycle="cycle"):
+    """Moyenne des probabilités des fenêtres d'un même vol : une ligne par vol."""
+    import pandas as pd
+
+    probas = np.asarray(probas, dtype="float64").ravel()
+    if len(infos) != len(probas):
+        raise ValueError("infos et probas doivent avoir le même nombre de lignes.")
+    table = pd.DataFrame(
+        {
+            col_moteur: np.asarray(infos[col_moteur]),
+            col_cycle: np.asarray(infos[col_cycle]),
+            "usure": np.asarray(infos["usure"]),
+            "RUL": np.asarray(infos["RUL"]),
+            "proba": probas,
+        }
+    )
+    return (
+        table.groupby([col_moteur, col_cycle], as_index=False)
+        .agg(usure=("usure", "first"), RUL=("RUL", "first"), proba=("proba", "mean"))
+        .sort_values([col_moteur, col_cycle])
+        .reset_index(drop=True)
+    )
