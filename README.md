@@ -108,6 +108,24 @@ Détail de toutes les expériences : [`docs/baselines.md`](docs/baselines.md).
 
 **Vitesse** : sur 371 600 vols, l'entraînement XGBoost est **4,3 fois plus rapide sur GPU** (12 s contre 53 s sur CPU).
 
+## 🧠 v4 — Deep learning (TensorFlow) : réseau dense et CNN 1D
+
+Évaluation finale sur les **39 moteurs de test** (réglages figés sur la validation), avec un intervalle de confiance à 95 % obtenu par **bootstrap sur les moteurs** (1 000 flottes tirées au hasard).
+
+| Modèle                                  | F1 macro [IC 95 %]    | Moteurs prévenus | Avance moyenne | Fausses alarmes    | Prédiction (2 938 vols) |
+| --------------------------------------- | --------------------- | ---------------- | -------------- | ------------------ | ----------------------- |
+| **XGBoost (v3)**                        | **0,852** [0,83–0,87] | **39 / 39**      | 40,1 vols      | **28 (4 moteurs)** | 0,02 s                  |
+| Régression logistique                   | 0,840 [0,81–0,86]     | 39 / 39          | 44,7 vols      | 54 (12 moteurs)    | 0,007 s                 |
+| Réseau dense (10 241 poids)             | 0,823 [0,80–0,85]     | 39 / 39          | 41,3 vols      | 51 (11 moteurs)    | 0,08 s                  |
+| CNN 1D sur signaux bruts (47 265 poids) | 0,743 [0,68–0,80]     | 37 / 39          | 32,0 vols      | 35 (6 moteurs)     | 3,1 s                   |
+
+![Classement final sur le test](results/figures/47_classement_test.png)
+
+- **XGBoost reste le modèle d'alerte.** L'écart avec la logistique n'est pas prouvé (−0,013, intervalle [−0,038 ; +0,011]) ; XGBoost est gardé pour ses fausses alarmes divisées par 2.
+- Le réseau dense et le CNN sont **significativement** derrière XGBoost (écarts −0,029 et −0,108, intervalles qui excluent 0).
+- Le CNN, qui ne voit que le signal brut, **égale XGBoost sur les pannes de turbine** (HPT+LPT : 0,867 contre 0,857) mais **échoue sur le fan** (0,288 contre 0,777) : la signature du fan est une faible variation de pression, noyée dans les conditions de vol.
+- Leçon : avec 49 moteurs d'entraînement, de bonnes features physiques battent le deep learning. Pistes : plus de fenêtres par vol, entrées en résidus.
+
 ## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
 
 Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
@@ -183,16 +201,17 @@ docker run --rm aeroguard:v0 pytest -v    # tests
 
 ## Technologies
 
-Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot
+Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot  TensorFlow / Keras · MLflow
 
-Prochainement : TensorFlow · MLflow · FastAPI · NVIDIA Triton
+Prochainement : FastAPI · NVIDIA Triton
 
 ## Feuille de route
 
 - [x] **v0 — Fondations** : environnement, détection par score z, simulateur, tests, Docker, CI
 - [x] **v1 — Données NASA N-CMAPSS** : 9 fichiers, 99 moteurs, 7 473 vols, 126 features, découpage sans fuite
 - [x] **v2 — Baselines et métriques** : 6 modèles, F1 macro, métriques métier par moteur
-- [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue- [ ] v4 — Deep learning (1D-CNN)
+- [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue-
+- [x] **v4 — Deep learning** : réseau dense et CNN 1D (TensorFlow), suivi MLflow, comparaison finale par bootstrap : XGBoost reste en tête
 - [ ] v5 — Autoencodeur : pannes inconnues
 - [ ] v6 — GAN : cas rares
 - [ ] v7 — Application complète (Triton, API, dashboard)
