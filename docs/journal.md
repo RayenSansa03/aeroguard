@@ -173,3 +173,17 @@
 - **Fait :** module `sequences.py` (fenêtres glissantes, normalisation par canal, pipeline tf.data) avec 10 tests ; script `scripts/preparer_fenetres.py` qui découpe les 9 fichiers NASA bruts en 29 892 fenêtres de 256 s × 18 canaux (0,55 Go), avec le découpage 49 / 11 / 39 de la v1.
 - **Appris :** un pas de 1 donnerait ≈ 62 millions de fenêtres (≈ 1,1 To), d'où 4 fenêtres régulières par vol ; la normalisation se fait avec les statistiques du train seulement ; les conditions de vol sont ajoutées comme canaux pour séparer l'usure de la façon de voler ; sur DS01_1, T50 monte de 0,28 et Nc baisse de 0,20 entre le cycle 1 et le cycle 100.
 - **Bloquant :** seul DS01 était sur le Drive ; l'archive NASA (15,8 Go) ne tenait pas dans le Drive (9 Go libres) ; réglé en traitant les 10 fichiers sur le PC avec un script, puis en envoyant seulement le résultat sur le Drive.
+
+## Leçon 4.6 — Réseau convolutif 1D (CNN)
+
+**Ce que j'ai appris :** un CNN 1D fait glisser des petits filtres sur le signal (partage des poids → 47 265 paramètres seulement). Conv1D + MaxPooling + GlobalAveragePooling, puis moyenne des 4 fenêtres par vol pour comparer avec XGBoost.
+
+**Résultats (validation, 819 vols) :** F1 macro 0.740, PR-AUC 0.940, précision 0.947, rappel 0.683, 11/11 moteurs, 32 vols d'avance, 9 fausses alarmes. Meilleure époque 19/29.
+
+**Classement :** logistique 0.894 > XGBoost 0.887 > dense 0.872 > CNN 0.740.
+
+**Pourquoi le CNN perd :** il ne voit que ≈12 % du vol, les signaux bruts mélangent usure et conditions de vol (le filtre n°16 utilise T50 mais aussi alt et T2), et 49 moteurs c'est peu.
+
+**Taille du noyau :** k = 3/7/15 → 0.743/0.740/0.746, aucun effet réel.
+
+**Leçon :** le deep learning ne bat pas automatiquement de bonnes features. Pistes : plus de fenêtres par vol, fenêtres en croisière seulement, entrée en résidus.
