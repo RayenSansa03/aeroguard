@@ -5,6 +5,7 @@ pytest.importorskip("tensorflow")
 
 from aeroguard.reseaux import (
     creer_callbacks,
+    creer_cnn_1d,
     creer_normaliseur,
     creer_reseau_dense,
     nombre_parametres_entrainables,
@@ -128,3 +129,64 @@ def test_arret_anticipe_et_sauvegarde(tmp_path):
     )
     assert len(historique.history["loss"]) < 100
     assert chemin.exists()
+
+
+def test_cnn_sortie_est_une_probabilite():
+    modele = creer_cnn_1d(32, 3)
+    X = np.random.default_rng(0).normal(size=(5, 32, 3)).astype("float32")
+    probas = modele.predict(X, verbose=0)
+    assert probas.shape == (5, 1)
+    assert np.all((probas >= 0) & (probas <= 1))
+
+
+def test_cnn_nombre_de_parametres_aeroguard():
+    modele = creer_cnn_1d(256, 18)
+    attendu = (7 * 18 * 32 + 32) + (7 * 32 * 64 + 64) + (7 * 64 * 64 + 64) + (64 + 1)
+    assert nombre_parametres_entrainables(modele) == attendu == 47_265
+
+
+def test_cnn_architecture():
+    modele = creer_cnn_1d(64, 4)
+    assert [couche.name for couche in modele.layers] == [
+        "conv_1",
+        "pool_1",
+        "conv_2",
+        "pool_2",
+        "conv_3",
+        "moyenne_globale",
+        "dropout",
+        "proba_usure",
+    ]
+    sans_dropout = creer_cnn_1d(64, 4, filtres=(8,), taux_dropout=0.0)
+    assert [couche.name for couche in sans_dropout.layers] == [
+        "conv_1",
+        "moyenne_globale",
+        "proba_usure",
+    ]
+
+
+@pytest.mark.parametrize(
+    "reglages",
+    [
+        {"filtres": ()},
+        {"taille_noyau": 0},
+        {"taux_dropout": 1.0},
+        {"longueur": 0},
+    ],
+)
+def test_cnn_reglages_invalides(reglages):
+    parametres = {"longueur": 32, "nombre_canaux": 3, **reglages}
+    with pytest.raises(ValueError):
+        creer_cnn_1d(**parametres)
+
+
+def test_cnn_apprend_un_motif():
+    generateur = np.random.default_rng(0)
+    X = generateur.normal(size=(300, 32, 2)).astype("float32")
+    y = (generateur.random(300) < 0.5).astype("float32")
+    X[y == 1, 10:17, 0] += 3.0  # un « pic » sur le canal 0 pour la classe 1
+    modele = creer_cnn_1d(
+        32, 2, filtres=(8,), taille_noyau=5, taux_dropout=0.0, taux_apprentissage=0.01
+    )
+    historique = modele.fit(X, y, epochs=15, batch_size=32, verbose=0)
+    assert historique.history["loss"][-1] < historique.history["loss"][0]
