@@ -100,3 +100,19 @@ Modèle d'alerte retenu : **XGBoost, seuil 0,81, k = 3** (fausses alarmes divis�
 
 - 30 vols du test (moteur DS02_14) ont des valeurs manquantes (phase de montée) : imputation par la médiane du train pour la logistique.
 - Rappel de la limite connue : famille de panne = fichier NASA → scores de diagnostic probablement optimistes pour une flotte nouvelle.
+
+## Module 4 — Deep learning (v4) : évaluation finale sur le test (39 moteurs)
+
+Seuils figés sur la validation (relus dans MLflow), k = 3, bootstrap par moteur (1 000 tirages, graine 42).
+
+| Modèle           | Seuil | F1 macro | IC 95 %         | Chute val → test | Moteurs prévenus | Avance | Fausses alarmes |
+| ---------------- | ----- | -------- | --------------- | ---------------- | ---------------- | ------ | --------------- |
+| **XGBoost**      | 0,81  | 0,852    | [0,827 ; 0,874] | −0,033           | 39 / 39          | 40,1   | 28 (4 moteurs)  |
+| Logistique       | 0,50  | 0,840    | [0,814 ; 0,862] | −0,046           | 39 / 39          | 44,7   | 54 (12 moteurs) |
+| Réseau dense (D) | 0,49  | 0,823    | [0,797 ; 0,845] | −0,049           | 39 / 39          | 41,3   | 51 (11 moteurs) |
+| CNN 1D           | 0,62  | 0,743    | [0,682 ; 0,800] | +0,003           | 37 / 39          | 32,0   | 35 (6 moteurs)  |
+
+- Écart à XGBoost : logistique −0,013 [−0,038 ; +0,011] (non prouvé, P(meilleur) = 15 %) ; dense −0,029 [−0,042 ; −0,015] ; CNN −0,108 [−0,164 ; −0,055].
+- Par famille, le CNN égale XGBoost sur HPT+LPT (0,867 / 0,857) et mixte (0,857 / 0,851) mais s'effondre sur le fan (0,288 / 0,777).
+- Coût : prédiction de 2 938 vols en 0,007 s (logistique), 0,023 s (XGBoost), 0,076 s (dense), 3,1 s (CNN).
+- Décision : **XGBoost, seuil 0,81, k = 3 reste le modèle d'alerte.**
