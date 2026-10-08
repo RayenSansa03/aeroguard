@@ -167,3 +167,9 @@
 - **Fait :** dropout et callbacks (EarlyStopping, ReduceLROnPlateau, ModelCheckpoint) ajoutés à `reseaux.py` avec 6 tests ; 4 configurations × 3 graines comparées et tracées dans MLflow.
 - **Appris :** le dropout baisse la perte de validation de 0,290 à 0,272 et stabilise le seuil (0,36 → 0,51 au lieu de 0,39 → 0,92) ; EarlyStopping divise les époques par deux et garde la meilleure ; le F1 macro plafonne vers 0,88 quelle que soit la protection : la limite vient des features tabulaires, pas du surapprentissage.
 - **Bloquant :** ImportError de `creer_callbacks` dans Colab, réglé en redémarrant la session après le merge.
+
+---
+
+- **Fait :** module `sequences.py` (fenêtres glissantes, normalisation par canal, pipeline tf.data) avec 10 tests ; script `scripts/preparer_fenetres.py` qui découpe les 9 fichiers NASA bruts en 29 892 fenêtres de 256 s × 18 canaux (0,55 Go), avec le découpage 49 / 11 / 39 de la v1.
+- **Appris :** un pas de 1 donnerait ≈ 62 millions de fenêtres (≈ 1,1 To), d'où 4 fenêtres régulières par vol ; la normalisation se fait avec les statistiques du train seulement ; les conditions de vol sont ajoutées comme canaux pour séparer l'usure de la façon de voler ; sur DS01_1, T50 monte de 0,28 et Nc baisse de 0,20 entre le cycle 1 et le cycle 100.
+- **Bloquant :** seul DS01 était sur le Drive ; l'archive NASA (15,8 Go) ne tenait pas dans le Drive (9 Go libres) ; réglé en traitant les 10 fichiers sur le PC avec un script, puis en envoyant seulement le résultat sur le Drive.
