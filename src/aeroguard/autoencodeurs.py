@@ -60,3 +60,63 @@ def erreur_reconstruction(modele, X, par_feature=False):
     reconstruction = np.asarray(modele.predict(X, verbose=0))
     erreurs = (X - reconstruction) ** 2
     return erreurs if par_feature else erreurs.mean(axis=1)
+
+
+def creer_autoencodeur_conv1d(
+    longueur,
+    nombre_canaux,
+    canaux_sortie=None,
+    filtres=(32, 16, 8),
+    taille_noyau=7,
+    taux_apprentissage=1e-3,
+    graine=42,
+):
+    """Autoencodeur convolutif pour des fenêtres (temps × canaux).
+
+    Chaque niveau de l'encodeur divise la durée par 2 (Conv1D + MaxPooling1D) ; le décodeur
+    fait le chemin inverse (UpSampling1D + Conv1D). Il reconstruit les `canaux_sortie`
+    PREMIERS canaux (par défaut tous) : on peut lui donner les conditions de vol en entrée
+    sans lui demander de les reconstruire.
+    """
+    from tensorflow import keras
+
+    sortie = nombre_canaux if canaux_sortie is None else canaux_sortie
+    if not filtres:
+        raise ValueError("Il faut au moins un niveau de filtres.")
+    if longueur % (2 ** len(filtres)) != 0:
+        raise ValueError("La longueur doit être divisible par 2 puissance le nombre de niveaux.")
+    if not 1 <= sortie <= nombre_canaux:
+        raise ValueError("canaux_sortie doit être entre 1 et nombre_canaux.")
+    keras.utils.set_random_seed(graine)
+
+    entree = keras.Input(shape=(longueur, nombre_canaux), name="fenetre")
+    x = entree
+    for numero, nombre in enumerate(filtres, start=1):
+        x = keras.layers.Conv1D(
+            nombre, taille_noyau, padding="same", activation="relu", name=f"encodeur_{numero}"
+        )(x)
+        x = keras.layers.MaxPooling1D(2, name=f"compression_{numero}")(x)
+    for numero, nombre in enumerate(reversed(filtres), start=1):
+        x = keras.layers.UpSampling1D(2, name=f"decompression_{numero}")(x)
+        x = keras.layers.Conv1D(
+            nombre, taille_noyau, padding="same", activation="relu", name=f"decodeur_{numero}"
+        )(x)
+    reconstruction = keras.layers.Conv1D(
+        sortie, taille_noyau, padding="same", name="reconstruction"
+    )(x)
+
+    modele = keras.Model(entree, reconstruction, name="aeroguard_autoencodeur_conv1d")
+    modele.compile(optimizer=keras.optimizers.Adam(learning_rate=taux_apprentissage), loss="mse")
+    return modele
+
+
+def erreur_reconstruction_fenetres(modele, X, par_canal=False, taille_lot=256):
+    """Erreur quadratique moyenne de chaque fenêtre, sur le temps et les canaux reconstruits.
+
+    par_canal=True → une erreur par fenêtre ET par canal reconstruit (quel capteur surprend).
+    """
+    X = np.asarray(X, dtype="float32")
+    reconstruction = np.asarray(modele.predict(X, batch_size=taille_lot, verbose=0))
+    cible = X[:, :, : reconstruction.shape[-1]]
+    erreurs = ((cible - reconstruction) ** 2).mean(axis=1)
+    return erreurs if par_canal else erreurs.mean(axis=1)
