@@ -96,3 +96,33 @@ def evaluer_alerte_score(
     table["alerte"] = alerte
     bilan = bilan_flotte(table, col_moteur, col_ordre, col_rul, k=k)
     return {**resultats, **resume_flotte(bilan)}
+
+
+def bilan_par_groupe(
+    groupes,
+    y_vrai,
+    scores,
+    seuil,
+    infos,
+    k=3,
+    col_moteur="moteur",
+    col_ordre="cycle",
+    col_rul="RUL",
+):
+    """Le bilan d'alerte calculé séparément pour chaque groupe (ex. famille de panne).
+
+    Renvoie un tableau : une ligne par groupe (triés), les mêmes colonnes que evaluer_alerte_score.
+    """
+    groupes = np.asarray(groupes)
+    y_vrai = np.asarray(y_vrai)
+    scores = np.asarray(scores)
+    if not len(groupes) == len(y_vrai) == len(scores) == len(infos):
+        raise ValueError("groupes, y_vrai, scores et infos doivent avoir la même longueur.")
+    lignes = []
+    for groupe in sorted(set(groupes.tolist())):
+        masque = groupes == groupe
+        bilan = evaluer_alerte_score(
+            y_vrai[masque], scores[masque], seuil, infos[masque], k, col_moteur, col_ordre, col_rul
+        )
+        lignes.append({"groupe": groupe, **bilan})
+    return pd.DataFrame(lignes).set_index("groupe")
