@@ -1,7 +1,28 @@
+# Environnements et Git
+
 .venv/
 .git/
+.github/
+
+# Données, résultats, modèles et documents : jamais dans l'image
+
 data/
-notebooks/
 results/
-**/__pycache__/
-*.egg-info/
+models/
+notebooks/
+docs/
+mlruns/
+mlflow.db
+
+# Tests et caches (inutiles pour faire tourner l'API)
+
+tests/
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+.coverage \*_/**pycache**/
+_.egg-info/
+
+# Secrets
+
+.env
