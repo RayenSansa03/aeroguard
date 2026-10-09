@@ -197,3 +197,9 @@
 - **Fait :** module `registre.py` (inscription d'une version avec description et étiquettes, alias, lecture d'un alias, règle de promotion) avec 7 tests ; registre MLflow `aeroguard-alerte` : logistique en version 1 (@challenger), XGBoost v3 en version 2 (@champion), avec signature, seuil, F1 et intervalle du test, commit du code.
 - **Appris :** un run est une expérience, le registre est le catalogue officiel (versions numérotées et immuables) ; l'application charge `@champion`, donc promotion et retour arrière se font sans toucher au code ; le seuil doit voyager avec le modèle ; on inscrit exactement le modèle testé (test de fumée 0,852 = 0,852) ; `search_model_versions` ne renvoie pas les alias, il faut `get_model_version`.
 - **Bloquant :** ruff format avait annulé le commit (fichiers reformatés) ; réglé en refaisant `git add` puis `git commit`.
+
+---
+
+- **Fait :** module `autoencodeurs.py` (statistiques et standardisation sur les vols sains, autoencodeur dense 126-64-16-8-16-64-126, erreur de reconstruction par vol et par feature) avec 10 tests ; autoencodeur entraîné sur les 1 096 vols sains du train seulement, suivi dans MLflow (expérience aeroguard-anomalies).
+- **Appris :** un autoencodeur apprend le normal et l'erreur de reconstruction devient le score d'anomalie ; les vols usés sont reconstruits 6,2 fois moins bien que les sains ; PR-AUC 0,953 sans aucune étiquette, mieux que l'Isolation Forest (0,915) ; l'erreur suit la RUL (Spearman −0,89) et décolle vers 40 vols avant la panne ; les features les plus surprenantes sont les pressions du fan (P21, P15) puis les températures des turbines (T48, T50), et le moteur fan DS04_6 est l'anomalie la plus forte, alors que c'est la famille où XGBoost et le CNN étaient les plus faibles.
+- **Bloquant :** rien ; l'entraînement a atteint la limite de 500 époques (taux d'apprentissage au minimum, gains négligeables).
