@@ -145,6 +145,29 @@ modele = mlflow.xgboost.load_model("models:/aeroguard-alerte@champion")
 - **Test de fumée** : le champion rechargé depuis le registre redonne exactement F1 = 0,852 sur le test.
 - **Règle de promotion** : un challenger ne devient champion que s'il bat le champion de façon prouvée (bootstrap par moteur). Promotion et retour
 
+## 🛡️ v5 — Autoencodeur et système hybride : détecter les pannes jamais vues
+
+Un modèle supervisé ne reconnaît que les pannes qu'il a apprises : sans aucun moteur fan à l'entraînement, XGBoost ne prévient que **2 moteurs fan de test sur 4**. La v5 ajoute un **autoencodeur** entraîné uniquement sur des vols **sains** : tout ce qu'il reconstruit mal est suspect, quelle que soit la panne.
+
+- **Ligne de base par moteur** : chaque vol est comparé aux 10 premiers vols de **son** moteur, ce qui efface la signature de la flotte (sans elle, l'autoencodeur sonnait en permanence sur une flotte jamais vue).
+- **Système hybride** : alerte si XGBoost **ou** l'autoencodeur alerte ; états affichés « normal », « anomalie inconnue », « usure connue », « usure confirmée ».
+- **Diagnostic par capteur** : les capteurs les plus mal reconstruits orientent l'inspection (fan → P21, P15 ; turbine HP → T48 ; turbine BP → T50).
+
+**Évaluation finale sur les 39 moteurs de test** (réglages figés sur la validation, après les 10 vols de ligne de base) :
+
+| Système                      | Pannes connues : moteurs prévenus | Avance moyenne | Fausses alarmes | Famille jamais vue : moteurs prévenus  |
+| ---------------------------- | --------------------------------- | -------------- | --------------- | -------------------------------------- |
+| XGBoost v3 seul              | 39 / 39                           | 40,1 vols      | 26              | 37 / 39 (fan : **2 / 4**)              |
+| Autoencodeur + ligne de base | 39 / 39                           | 32,5 vols      | 7               | 39 / 39 (fan : 4 / 4, 0 fausse alarme) |
+| **Hybride (v5)**             | **39 / 39**                       | **40,8 vols**  | 29              | **39 / 39 (fan : 4 / 4)**              |
+
+![Panne jamais vue : XGBoost seul contre système hybride](results/figures/56_test_panne_inconnue.png)
+
+- Sur les pannes connues, l'hybride fait jeu égal avec XGBoost ; sur une panne jamais vue, il prévient **tous** les moteurs.
+- Registre MLflow : `aeroguard-alerte@champion` (XGBoost) et `aeroguard-anomalie@champion` (autoencodeur centré) travaillent ensemble.
+- **Limite** : sur certaines flottes inconnues (HPT+LPT), les deux gardiens produisent des fausses alarmes ; quelques vols de référence de la nouvelle flotte permettraient de les réduire.
+- Essais écartés (documentés) : autoencodeur convolutif sur signaux bruts (7,5 vols d'avance) et « jumeau numérique » (20,2 vols) : les features physiques restent meilleures sur ces données.
+
 ## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
 
 Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
@@ -231,6 +254,6 @@ Prochainement : FastAPI · NVIDIA Triton
 - [x] **v2 — Baselines et métriques** : 6 modèles, F1 macro, métriques métier par moteur
 - [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue-
 - [x] **v4 — Deep learning** : réseau dense et CNN 1D (TensorFlow), suivi MLflow, comparaison finale par bootstrap : XGBoost reste en tête
-- [ ] v5 — Autoencodeur : pannes inconnues
+- [x] **v5 — Autoencodeur et système hybride** : détection des pannes jamais vues (fan : 4/4 moteurs de test contre 2/4 pour XGBoost seul), ligne de base par moteur, diagnostic par capteur
 - [ ] v6 — GAN : cas rares
 - [ ] v7 — Application complète (Triton, API, dashboard)
