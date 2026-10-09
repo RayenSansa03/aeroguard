@@ -116,3 +116,30 @@ Seuils figés sur la validation (relus dans MLflow), k = 3, bootstrap par moteur
 - Par famille, le CNN égale XGBoost sur HPT+LPT (0,867 / 0,857) et mixte (0,857 / 0,851) mais s'effondre sur le fan (0,288 / 0,777).
 - Coût : prédiction de 2 938 vols en 0,007 s (logistique), 0,023 s (XGBoost), 0,076 s (dense), 3,1 s (CNN).
 - Décision : **XGBoost, seuil 0,81, k = 3 reste le modèle d'alerte.**
+
+## Module 5 — Autoencodeur et système hybride (v5) : évaluation finale sur le test (39 moteurs)
+
+Réglages figés sur la validation : XGBoost v3 seuil 0,81 k = 3 ; autoencodeur centré (ligne de base = 10 premiers vols) p90 (seuil 0,618) k = 5 ; hybride = XGBoost OU autoencodeur. Évaluation après les 10 vols de ligne de base.
+
+### Pannes connues
+
+| Système               | Moteurs | Avance | Fausses alarmes | F1 macro (alertes confirmées) [IC 95 %] |
+| --------------------- | ------- | ------ | --------------- | --------------------------------------- |
+| XGBoost v3            | 39 / 39 | 40,1   | 26 (4 moteurs)  | 0,783 [0,746 ; 0,818]                   |
+| Autoencodeur standard | 39 / 39 | 29,2   | 6 (1 moteur)    | 0,654 [0,634 ; 0,673]                   |
+| Autoencodeur centré   | 39 / 39 | 32,5   | 7 (2 moteurs)   | 0,692 [0,667 ; 0,719]                   |
+| Hybride               | 39 / 39 | 40,8   | 29 (5 moteurs)  | 0,791 [0,755 ; 0,827]                   |
+
+### Famille retirée de l'entraînement (moteurs de test de cette famille)
+
+| Famille | Moteurs | XGBoost seul | Avance | Fausses alarmes | Hybride | Avance | Fausses alarmes |
+| ------- | ------- | ------------ | ------ | --------------- | ------- | ------ | --------------- |
+| fan     | 4       | 2            | 26,0   | 0               | 4       | 39,8   | 0               |
+| HPC     | 4       | 4            | 40,5   | 0               | 4       | 40,5   | 0               |
+| HPT     | 4       | 4            | 41,2   | 0               | 4       | 41,2   | 0               |
+| HPT+LPT | 9       | 9            | 42,4   | 43              | 9       | 44,6   | 52              |
+| LPC+HPC | 4       | 4            | 42,5   | 0               | 4       | 42,5   | 0               |
+| LPT     | 4       | 4            | 37,5   | 0               | 4       | 37,5   | 0               |
+| mixte   | 10      | 10           | 35,3   | 22              | 10      | 35,3   | 22              |
+
+Décision : déployer le système hybride ; `aeroguard-alerte@champion` (XGBoost) + `aeroguard-anomalie@champion` (autoencodeur centré, version 1).
