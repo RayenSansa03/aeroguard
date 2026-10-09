@@ -1,0 +1,4 @@
+# Seulement ce dont l'image Docker de l'API a besoin.
+# Grandira au module 7 (xgboost, scikit-learn, tensorflow-cpu...).
+fastapi>=0.115
+uvicorn>=0.30
