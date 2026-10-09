@@ -79,3 +79,20 @@ def evaluer_alerte(
     table["alerte"] = alerte
     bilan = bilan_flotte(table, col_moteur, col_ordre, col_rul, k=k)
     return {**scores, **resume_flotte(bilan)}
+
+
+def evaluer_alerte_score(
+    y_vrai, scores, seuil, infos, k=3, col_moteur="moteur", col_ordre="cycle", col_rul="RUL"
+):
+    """Comme evaluer_alerte, mais pour un score d'anomalie sans limite (ex. erreur de
+    reconstruction) : alerte si le score dépasse STRICTEMENT le seuil, quel qu'il soit."""
+    from aeroguard.anomalies import alertes
+    from aeroguard.evaluation import metriques
+
+    alerte = alertes(scores, seuil)
+    resultats = metriques(y_vrai, alerte, scores)
+    table = infos[[col_moteur, col_ordre, col_rul]].copy()
+    table["y"] = list(y_vrai)
+    table["alerte"] = alerte
+    bilan = bilan_flotte(table, col_moteur, col_ordre, col_rul, k=k)
+    return {**resultats, **resume_flotte(bilan)}
