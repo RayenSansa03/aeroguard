@@ -269,3 +269,9 @@
 - **Fait :** test final de la v6 ouvert une seule fois sur les 39 moteurs : XGBoost réentraîné sur train + val (60 moteurs) avec et sans SMOTE (407 vols usés fan doublés), mêmes réglages que la v3 (seuil 0,81, k = 3) ; décision par la règle de promotion du registre (`doit_promouvoir`, bootstrap par moteur) plus une taille d'effet minimale (+0,01 de PR-AUC fan) ; README section v6, roadmap, `docs/baselines.md` module 6 ; figure `66_test_final_v6.png`.
 - **Appris :** F1 macro 0,851 sans ajout contre 0,854 avec SMOTE, PR-AUC 0,977 et PR-AUC fan 0,975 identiques, 39/39 moteurs et 4/4 moteurs fan dans les deux cas ; SMOTE retire 5 fausses alarmes (37 → 32) mais l'écart de F1 n'est pas prouvé (+0,0061, IC 95 % [−0,0019 ; +0,0149]) et le gain fan (+0,0005) est loin du minimum : le champion `aeroguard-alerte` reste en place ; bilan du certificat : supervisé pour les pannes connues, autoencodeur pour l'inconnu, hybride en production, augmentation seulement si une famille rare fait vraiment échouer le modèle, toujours avec une règle fixée avant et une taille d'effet minimale.
 - **Bloquant :** rien .
+
+---
+
+- **Fait :** création de `decision.py` (OK / A_SURVEILLER / URGENT) qui combine XGBoost v3 (≥ 0.81 sur 3 vols) et l'autoencodeur centré v5 (> 0.618 sur 5 vols), 10 tests. Rejeu vol par vol des 39 moteurs de test : 39/39 en rouge avant la panne, avance médiane 39 vols, 18 vols sains classés URGENT (contre 37 fausses alertes pour XGB seul).
+- **Appris :** confirmer une alerte sur plusieurs vols divise les fausses alertes par deux sans rater de panne. Un niveau orange n'a de valeur que s'il dure : avec `proba_urgente=0.95`, il ne dure qu'un vol. Un niveau qui clignote demande une hystérésis.
+- **Bloquant :** pendant les 10 premiers vols, l'autoencodeur ne juge pas encore, donc une urgence précoce n'indique aucun capteur. Les seuils ne doivent pas être réglés sur ce rejeu, qui utilise le test.
