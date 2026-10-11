@@ -28,3 +28,9 @@ mlruns/
 mlflow/
 mlruns/
 mlartifacts/
+
+# Fichiers locaux (modeles et donnees), jamais commites
+local/
+
+# Fichiers locaux (modeles et donnees), jamais commites
+local/
