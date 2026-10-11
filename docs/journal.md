@@ -287,3 +287,9 @@
 - **Fait :** remplacement de `autoencodeur.predict()` par un appel direct `autoencodeur(x, training=False)` ; parité 76/76 conservée ; p50 à 1 client 115 → 28 ms, débit ×4.
 - **Appris :** `predict()` est fait pour les gros lots, son surcoût domine pour une seule ligne ; toujours vérifier la parité après une optimisation ; une fois le surcoût retiré, la limite devient le GIL et la sur-souscription CPU ; un état gardé en mémoire empêche de lancer plusieurs workers.
 - **Bloquant :** pas de montée en charge horizontale tant que l'historique des moteurs reste dans la mémoire du processus.
+
+---
+
+- **Fait :** interface `DepotHistorique` + `DepotMemoire` ; `ServiceDecision` lit, calcule sur des copies et écrit en une fois ; correction de l'historique partiel quand un modèle échoue ; parité 76/76.
+- **Appris :** séparer « décider » et « ranger » permet de changer de stockage sans toucher au cœur ; écriture « tout ou rien » ; un test qui lit un attribut privé casse au premier refactor ; mise à jour perdue = lire/calculer/écrire sans verrou.
+- **Bloquant :** —
