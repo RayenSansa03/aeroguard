@@ -5,6 +5,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 from fastapi import FastAPI
 
+from aeroguard.routes_flotte import routeur as routeur_flotte
+
 
 def version_aeroguard():
     """Version du package installé (lue dans pyproject.toml au moment de l'installation)."""
@@ -19,6 +21,8 @@ app = FastAPI(
     description="Détection d'anomalies pour moteurs d'avion (NASA N-CMAPSS).",
     version=version_aeroguard(),
 )
+
+app.include_router(routeur_flotte)
 
 
 @app.get("/")
