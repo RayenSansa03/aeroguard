@@ -73,7 +73,7 @@ def test_autoencodeur_muet_pendant_ligne_de_base(service):
 def test_mesure_manquante_nan_pour_xgb_mediane_pour_ae(service, modeles):
     service.traiter_vol("M1", 1, {"T48_moy": 1.0, "T50_moy": 1.0})
     assert np.isnan(modeles.dernier_x[0, 2])
-    assert service._moteurs["M1"].vols[0][2] == 1.0
+    assert service.depot.lire("M1").vols[0][2] == 1.0
 
 
 def test_feature_inconnue_refusee(service):
