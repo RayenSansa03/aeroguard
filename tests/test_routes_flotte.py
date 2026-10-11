@@ -93,3 +93,12 @@ def test_health_ne_depend_pas_des_modeles(client, tmp_path, monkeypatch):
 def test_historique_d_un_moteur(client, faux_service):
     assert client.get("/flotte/moteurs/M1/historique").json()[0]["cycle"] == 1
     assert client.get("/flotte/moteurs/M9/historique").status_code == 404
+
+
+def test_mode_triton_sans_fichiers_renvoie_503(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("AEROGUARD_MODELES", str(tmp_path))
+    monkeypatch.setenv("AEROGUARD_TRITON_URL", "http://127.0.0.1:9")
+    obtenir_service.cache_clear()
+    reponse = client.post("/flotte/vols", json=VOL)
+    assert reponse.status_code == 503
+    obtenir_service.cache_clear()
