@@ -162,6 +162,56 @@ def charger_service(dossier: str | Path) -> ServiceDecision:
     return _charger_modeles(dossier)  # pragma: no cover
 
 
+def charger_service_triton(dossier: str | Path, url: str, client=None) -> ServiceDecision:
+    """Construit le service en déléguant les deux modèles à Triton.
+
+    L'API ne garde que la logique (imputation, centrage, standardisation, décision) : ni
+    TensorFlow ni XGBoost ne sont nécessaires, seulement les statistiques et la configuration.
+    """
+    from aeroguard.autoencodeurs import standardiser
+    from aeroguard.hybride import centrer_par_moteur
+
+    dossier = Path(dossier)
+    requis = [FICHIERS_MODELES["stats"], FICHIERS_MODELES["config"]]
+    manquants = [nom for nom in requis if not (dossier / nom).exists()]
+    if manquants:
+        raise FileNotFoundError(f"Fichiers de modèles manquants dans {dossier} : {manquants}")
+    if client is None:
+        from aeroguard.client_triton import ClientTriton
+
+        client = ClientTriton(url)
+    for modele in ("xgb_alerte", "autoencodeur"):
+        if not client.pret(modele):
+            raise ConnectionError(f"Triton n'est pas prêt pour {modele} ({url})")
+
+    stats = np.load(dossier / FICHIERS_MODELES["stats"], allow_pickle=True)
+    config = json.loads((dossier / FICHIERS_MODELES["config"]).read_text(encoding="utf-8"))
+    moyennes, ecarts = stats["moyennes"], stats["ecarts"]
+
+    def predire_proba(x):
+        return client.probas_usure(x)[0]
+
+    def erreurs_ae(x_centre):
+        # Même calcul que autoencodeurs.erreur_reconstruction (par_feature=True), en float32.
+        xn = standardiser(x_centre, moyennes, ecarts)
+        return ((xn - client.reconstruction(xn)) ** 2)[0]
+
+    def centrer(X, cycles):
+        moteurs = np.zeros(len(cycles), dtype=int)
+        return centrer_par_moteur(X, moteurs, cycles, n_premiers=config["n_premiers"])
+
+    return ServiceDecision(
+        colonnes=[str(c) for c in stats["colonnes"]],
+        predire_proba=predire_proba,
+        erreurs_ae=erreurs_ae,
+        centrer=centrer,
+        medianes=stats["medianes_imputation"],
+        seuil_ae=config["seuil"],
+        k_ae=config["k"],
+        n_premiers=config["n_premiers"],
+    )
+
+
 def _charger_modeles(dossier: Path) -> ServiceDecision:  # pragma: no cover
     # Imports ML lourds ici : l'API démarre sans eux (par exemple /health dans Docker).
     import pandas as pd

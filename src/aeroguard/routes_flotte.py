@@ -20,13 +20,20 @@ class Vol(BaseModel):
 
 @lru_cache(maxsize=1)
 def obtenir_service():
-    """Charge les modèles une seule fois, au premier appel (chargement paresseux)."""
-    dossier = os.environ.get("AEROGUARD_MODELES", "local/models")
-    try:
-        from aeroguard.service import charger_service
+    """Charge le service une seule fois, au premier appel (chargement paresseux).
 
+    Si AEROGUARD_TRITON_URL est défini, les modèles tournent dans Triton ;
+    sinon, ils sont chargés dans l'API depuis AEROGUARD_MODELES.
+    """
+    dossier = os.environ.get("AEROGUARD_MODELES", "local/models")
+    url_triton = os.environ.get("AEROGUARD_TRITON_URL")
+    try:
+        from aeroguard.service import charger_service, charger_service_triton
+
+        if url_triton:
+            return charger_service_triton(dossier, url_triton)
         return charger_service(dossier)
-    except (FileNotFoundError, ImportError) as erreur:
+    except (FileNotFoundError, ImportError, ConnectionError) as erreur:
         raise HTTPException(status_code=503, detail=f"Modèles indisponibles : {erreur}") from erreur
 
 
