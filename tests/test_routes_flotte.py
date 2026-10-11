@@ -13,6 +13,9 @@ class FauxService:
     def __init__(self):
         self.recus = []
 
+    def historique(self, moteur):
+        return [{"moteur": moteur, "cycle": 1, "niveau": "OK"}] if moteur == "M1" else None
+
     def traiter_vol(self, moteur, cycle, mesures):
         if "inconnue" in mesures:
             raise ValueError("Features inconnues : ['inconnue']")
@@ -85,3 +88,8 @@ def test_health_ne_depend_pas_des_modeles(client, tmp_path, monkeypatch):
     monkeypatch.setenv("AEROGUARD_MODELES", str(tmp_path))
     obtenir_service.cache_clear()
     assert client.get("/health").status_code == 200
+
+
+def test_historique_d_un_moteur(client, faux_service):
+    assert client.get("/flotte/moteurs/M1/historique").json()[0]["cycle"] == 1
+    assert client.get("/flotte/moteurs/M9/historique").status_code == 404

@@ -112,3 +112,10 @@ def test_capteurs_en_cause_sans_doublon():
 def test_charger_service_signale_fichiers_manquants(tmp_path):
     with pytest.raises(FileNotFoundError, match="xgb_binaire_v3.json"):
         charger_service(tmp_path)
+
+
+def test_historique_garde_chaque_recommandation(service):
+    for cycle in range(1, 4):
+        service.traiter_vol("M1", cycle, SAIN)
+    assert [reco["cycle"] for reco in service.historique("M1")] == [1, 2, 3]
+    assert service.historique("inconnu") is None
