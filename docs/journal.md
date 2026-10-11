@@ -281,3 +281,9 @@
 - **Fait :** création de `service.py` (historique par moteur, XGBoost v3 + autoencodeur centré v5, moteur de décision de la 7.1) et des routes `/flotte` (envoyer un vol, consulter un moteur, lister la flotte, réinitialiser un moteur), branchées dans `api.py`. 17 tests avec de faux modèles. Script de parité : DS02_14 76/76 et DS08a_15 72/72 niveaux identiques au notebook 7.1, écart max de proba 1.1e-16. Les modèles sont copiés dans `local/`, ignoré par Git.
 - **Appris :** une API de décision doit garder un historique par moteur. Injecter les modèles sous forme de fonctions permet de tester sans TensorFlow. Le chargement paresseux garde `/health` indépendant des modèles (503 clair s'ils manquent). Mesurer la parité notebook/API protège contre le training-serving skew. `zip(strict=True)` évite de perdre des données en silence.
 - **Bloquant :** l'historique est en mémoire et se perd au redémarrage. Un vol sans aucune mesure donne une proba d'usure de 0.986 : il faudra refuser les vols trop incomplets. Le `pragma: no cover` n'est pas pris en compte par la configuration coverage (`service.py` à 78 %). Les modèles sont des copies de fichiers, pas encore lus depuis le registre `@champion`.
+
+---
+
+- **Fait :** remplacement de `autoencodeur.predict()` par un appel direct `autoencodeur(x, training=False)` ; parité 76/76 conservée ; p50 à 1 client 115 → 28 ms, débit ×4.
+- **Appris :** `predict()` est fait pour les gros lots, son surcoût domine pour une seule ligne ; toujours vérifier la parité après une optimisation ; une fois le surcoût retiré, la limite devient le GIL et la sur-souscription CPU ; un état gardé en mémoire empêche de lancer plusieurs workers.
+- **Bloquant :** pas de montée en charge horizontale tant que l'historique des moteurs reste dans la mémoire du processus.
