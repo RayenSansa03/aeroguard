@@ -65,6 +65,23 @@ def test_entrainement_compile_fonctionne_aussi():
     assert len(historique["perte_g"]) == 1
 
 
+def test_entrainement_avec_lissage_et_taux_expert(mode_eager):
+    X = np.random.default_rng(2).normal(size=(64, 4)).astype("float32")
+    generateur, discriminateur = petit_gan()
+    historique = entrainer_gan(
+        generateur,
+        discriminateur,
+        X,
+        epochs=1,
+        taille_lot=32,
+        dim_bruit=8,
+        afficher_tous_les=0,
+        lissage_etiquettes=0.1,
+        taux_apprentissage_d=1e-4,
+    )
+    assert np.isfinite(historique["perte_d"]).all()
+
+
 def test_entrainement_refuse_les_donnees_invalides():
     generateur, discriminateur = petit_gan(nombre_features=2, dim_bruit=4)
     with pytest.raises(ValueError):
@@ -75,6 +92,10 @@ def test_entrainement_refuse_les_donnees_invalides():
         entrainer_gan(generateur, discriminateur, np.full((10, 2), np.nan), taille_lot=5)
     with pytest.raises(ValueError):
         entrainer_gan(generateur, discriminateur, np.ones((10, 2)), epochs=0, taille_lot=5)
+    with pytest.raises(ValueError):
+        entrainer_gan(
+            generateur, discriminateur, np.ones((10, 2)), taille_lot=5, lissage_etiquettes=0.5
+        )
 
 
 def test_generer_forme_et_reproductibilite():
