@@ -1,4 +1,5 @@
-# Seulement ce dont l'image Docker de l'API a besoin.
-# Grandira au module 7 (xgboost, scikit-learn, tensorflow-cpu...).
+# Seulement ce dont l'image Docker de l'API a besoin (mode Triton : pas de TensorFlow ni XGBoost).
 fastapi>=0.115
 uvicorn>=0.30
+numpy>=2.0
+httpx>=0.27

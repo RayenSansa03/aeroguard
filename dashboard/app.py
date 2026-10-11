@@ -1,5 +1,7 @@
 """Tableau de bord AeroGuard (interface en anglais) : état de la flotte et historique par moteur."""
 
+import os
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -18,7 +20,9 @@ from aeroguard.tableau import (
 st.set_page_config(page_title="AeroGuard — Fleet", page_icon="✈️", layout="wide")
 st.title("AeroGuard — Fleet predictive maintenance")
 
-url = st.sidebar.text_input("API address", "http://127.0.0.1:8000")
+url = st.sidebar.text_input(
+    "API address", os.environ.get("AEROGUARD_API_URL", "http://127.0.0.1:8000")
+)
 automatique = st.sidebar.toggle("Auto-refresh (5 s)", value=False)
 st.sidebar.caption("Status: green = OK, orange = watch, red = urgent.")
 

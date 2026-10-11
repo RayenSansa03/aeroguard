@@ -1,13 +1,56 @@
+# AeroGuard : pile complète (Triton, API, tableau de bord, MLflow).
+# Les modèles ne sont jamais copiés dans les images : ils sont montés en lecture seule depuis local/.
 services:
+  triton:
+    image: nvcr.io/nvidia/tritonserver:24.08-py3
+    command: tritonserver --model-repository=/models
+    volumes:
+      - ./local/triton:/models:ro
+    ports:
+      - "8010:8000"
+      - "8012:8002"
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/v2/health/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
   api:
     build: .
     image: aeroguard-api:latest
     ports:
-      - "8000:8000"
+      - "8080:8000"
     environment:
+      AEROGUARD_MODELES: /models
+      AEROGUARD_TRITON_URL: http://triton:8000
       MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./local/models:/models:ro
     depends_on:
-      - mlflow
+      triton:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    image: aeroguard-dashboard:latest
+    ports:
+      - "8501:8501"
+    environment:
+      AEROGUARD_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
   mlflow:
