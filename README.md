@@ -168,6 +168,57 @@ Un modèle supervisé ne reconnaît que les pannes qu'il a apprises : sans aucun
 - **Limite** : sur certaines flottes inconnues (HPT+LPT), les deux gardiens produisent des fausses alarmes ; quelques vols de référence de la nouvelle flotte permettraient de les réduire.
 - Essais écartés (documentés) : autoencodeur convolutif sur signaux bruts (7,5 vols d'avance) et « jumeau numérique » (20,2 vols) : les features physiques restent meilleures sur ces données.
 
+## 🧪 v6 — GAN et cas rares : générer des données synthétiques, et savoir quand ne pas le faire
+
+**Question :** quand une famille de pannes est rare, des vols **synthétiques** (GAN, SMOTE) peuvent-ils aider XGBoost ?
+
+**Démarche (6 leçons) :**
+
+1. **Mesurer avant de construire** : les vols usés ne sont pas rares (70,5 % du train) ; la vraie rareté est au niveau des familles (fan, HPC, LPC+HPC : 5 moteurs chacune).
+2. **GAN tabulaire** (Keras, boucle `tf.GradientTape`) entraîné sur les 340 vols usés « fan » : entraînement stable, proche de l'équilibre.
+3. **Mode collapse** provoqué et détecté (bruit à 1 dimension : espacement des faux vols divisé par 200), remèdes testés (lissage des étiquettes, expert ralenti).
+4. **Évaluation complète des faux vols** sur 4 piliers : fidélité (KS, IQR), réalisme (classifieur), mémorisation (DCR), utilité (TSTR).
+5. **GAN contre SMOTE** en validation croisée par moteur (GAN réentraîné dans chaque pli pour éviter toute fuite).
+6. **Test final** ouvert une seule fois, décision avec la règle de promotion du registre MLflow.
+
+**Ce que révèle l'évaluation des faux vols (6.4) :**
+
+| Candidat                | KS médian ↓ | Un classifieur les distingue ? (AUC, 0,5 = non) | Recopie le train ?       | Utilité (PR-AUC TSTR) |
+| ----------------------- | ----------- | ----------------------------------------------- | ------------------------ | --------------------- |
+| Vrais vols (référence)  | —           | —                                               | —                        | **0,985**             |
+| GAN                     | **0,147**   | **1,000** (oui, toujours)                       | non (0 %)                | 0,931                 |
+| Gaussienne              | 0,191       | 0,423                                           | non                      | 0,966                 |
+| Copies bruitées (piège) | 0,053       | 0,408                                           | **oui (100 % repérées)** | 0,980                 |
+
+Le GAN reproduit bien chaque feature, mais il **viole la physique** (écarts-types négatifs), et un simple classifieur repère 100 % de ses faux vols.
+
+![Évaluation des faux vols](results/figures/64_evaluation_faux_vols.png)
+
+**GAN contre SMOTE (6.5, validation croisée, 6 plis) :** sans ajout, XGBoost a déjà une PR-AUC fan de 0,978 et **100 %** des vols fan critiques détectés (effet plafond). GAN brut −0,0002, GAN rogné +0,0005, gaussienne −0,0011, SMOTE +0,0017 : aucun gain utile en pratique.
+
+![GAN contre SMOTE](results/figures/65_gan_contre_smote.png)
+
+**Test final (39 moteurs, ouvert une seule fois) :**
+
+| Modèle                 | F1 macro | PR-AUC fan | Moteurs détectés | Fausses alarmes |
+| ---------------------- | -------- | ---------- | ---------------- | --------------- |
+| **XGBoost (champion)** | 0,851    | 0,975      | 39/39            | 37              |
+| XGBoost + SMOTE        | 0,854    | 0,975      | 39/39            | 32              |
+
+Écart de F1 non prouvé (IC 95 % [−0,002 ; +0,015]), gain fan de +0,0005 sous le minimum exigé (+0,01) : **le champion reste en place** (`aeroguard-alerte@champion`).
+
+![Test final v6](results/figures/66_test_final_v6.png)
+
+**Quel modèle pour quelle situation ?**
+
+- **Panne connue et bien représentée** → XGBoost (supervisé) : le plus précis et le plus simple.
+- **Panne jamais vue** → autoencodeur entraîné sur le normal, avec ligne de base par moteur.
+- **En production** → le système hybride v5 (XGBoost OU autoencodeur).
+- **Panne connue mais très rare, et modèle supervisé en échec** → d'abord SMOTE, puis un GAN seulement avec une évaluation complète (fidélité, réalisme, mémorisation, utilité).
+- **Toujours** → une règle de décision fixée avant de regarder, une taille d'effet minimale, et un test ouvert une seule fois.
+
+**Limites :** une seule famille rare étudiée (fan) ; GAN tabulaire simple (pas de WGAN-GP ni de GAN conditionnel) ; les familles « rares » ont encore 5 à 6 moteurs, ce qui ne permet pas de conclure pour une famille à 1 ou 2 moteurs.
+
 ## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
 
 Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
@@ -255,5 +306,5 @@ Prochainement : FastAPI · NVIDIA Triton
 - [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue-
 - [x] **v4 — Deep learning** : réseau dense et CNN 1D (TensorFlow), suivi MLflow, comparaison finale par bootstrap : XGBoost reste en tête
 - [x] **v5 — Autoencodeur et système hybride** : détection des pannes jamais vues (fan : 4/4 moteurs de test contre 2/4 pour XGBoost seul), ligne de base par moteur, diagnostic par capteur
-- [ ] v6 — GAN : cas rares
+- [x] **v6 — GAN et cas rares** : GAN tabulaire, détection du mode collapse, évaluation des données synthétiques (fidélité, réalisme, mémorisation, TSTR), GAN contre SMOTE ; aucun gain utile, le champion XGBoost reste en place
 - [ ] v7 — Application complète (Triton, API, dashboard)
