@@ -71,7 +71,14 @@ class ServiceDecision:
         self.k_ae = k_ae
         self.n_premiers = n_premiers
         self._moteurs: dict[str, HistoriqueMoteur] = {}
-        self._verrou = threading.Lock()
+        self._verrous: dict[str, threading.Lock] = {}
+        self._registre = threading.Lock()
+
+    def _verrou_moteur(self, moteur: str) -> threading.Lock:
+        """Verrou propre à un moteur : les vols d'un même moteur restent ordonnés,
+        les moteurs différents sont traités en parallèle."""
+        with self._registre:
+            return self._verrous.setdefault(moteur, threading.Lock())
 
     def _vecteur(self, mesures: Mapping[str, float | None]) -> np.ndarray:
         inconnues = sorted(set(mesures) - set(self.colonnes))
@@ -83,8 +90,9 @@ class ServiceDecision:
     def traiter_vol(self, moteur: str, cycle: int, mesures: Mapping[str, float | None]) -> dict:
         """Ajoute un vol à l'historique du moteur et renvoie la recommandation."""
         x_brut = self._vecteur(mesures)
-        with self._verrou:
-            historique = self._moteurs.setdefault(moteur, HistoriqueMoteur())
+        with self._verrou_moteur(moteur):
+            with self._registre:
+                historique = self._moteurs.setdefault(moteur, HistoriqueMoteur())
             if historique.cycles and cycle <= historique.cycles[-1]:
                 raise ValueError(
                     f"Le cycle {cycle} doit être supérieur au dernier cycle reçu "
@@ -132,6 +140,11 @@ class ServiceDecision:
         historique = self._moteurs.get(moteur)
         return list(historique.recommandations) if historique else None
 
+    def _copie_moteurs(self) -> list[tuple[str, HistoriqueMoteur]]:
+        """Instantané du registre, pour le parcourir sans bloquer les autres requêtes."""
+        with self._registre:
+            return list(self._moteurs.items())
+
     def etat_flotte(self) -> list[dict]:
         """Une ligne de synthèse par moteur, les plus urgents en premier."""
         ordre = {"URGENT": 0, "A_SURVEILLER": 1, "OK": 2}
@@ -142,14 +155,14 @@ class ServiceDecision:
                 "niveau": h.derniere["niveau"],
                 "cycle": h.derniere["cycle"],
             }
-            for moteur, h in self._moteurs.items()
+            for moteur, h in self._copie_moteurs()
             if h.derniere is not None
         ]
         return sorted(lignes, key=lambda ligne: (ordre.get(ligne["niveau"], 3), ligne["moteur"]))
 
     def reinitialiser(self, moteur: str) -> bool:
         """Oublie un moteur (par exemple après une révision). False s'il était inconnu."""
-        with self._verrou:
+        with self._verrou_moteur(moteur), self._registre:
             return self._moteurs.pop(moteur, None) is not None
 
 
