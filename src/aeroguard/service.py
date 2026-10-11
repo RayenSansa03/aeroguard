@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-import threading
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
 from aeroguard.decision import K_AE, SEUIL_AE, decider
+from aeroguard.depot import DepotHistorique, DepotMemoire, HistoriqueMoteur
 
 FICHIERS_MODELES = {
     "alerte": "xgb_binaire_v3.json",
@@ -32,23 +31,12 @@ def capteurs_en_cause(erreurs_vol, colonnes, nombre=2):
     return tuple(capteurs)
 
 
-@dataclass
-class HistoriqueMoteur:
-    """Ce que le service garde en mémoire pour un moteur."""
-
-    cycles: list = field(default_factory=list)
-    vols: list = field(default_factory=list)
-    probas: list = field(default_factory=list)
-    erreurs: list = field(default_factory=list)
-    recommandations: list = field(default_factory=list)
-    derniere: dict | None = None
-
-
 class ServiceDecision:
     """Transforme chaque vol reçu en recommandation de maintenance.
 
     Les modèles sont injectés sous forme de fonctions : les tests utilisent des
     faux modèles légers, la production utilise les vrais modèles champions.
+    L'historique des moteurs est confié à un dépôt (en mémoire par défaut).
     """
 
     def __init__(
@@ -61,6 +49,7 @@ class ServiceDecision:
         seuil_ae: float = SEUIL_AE,
         k_ae: int = K_AE,
         n_premiers: int = 10,
+        depot: DepotHistorique | None = None,
     ):
         self.colonnes = list(colonnes)
         self.predire_proba = predire_proba
@@ -70,15 +59,7 @@ class ServiceDecision:
         self.seuil_ae = seuil_ae
         self.k_ae = k_ae
         self.n_premiers = n_premiers
-        self._moteurs: dict[str, HistoriqueMoteur] = {}
-        self._verrous: dict[str, threading.Lock] = {}
-        self._registre = threading.Lock()
-
-    def _verrou_moteur(self, moteur: str) -> threading.Lock:
-        """Verrou propre à un moteur : les vols d'un même moteur restent ordonnés,
-        les moteurs différents sont traités en parallèle."""
-        with self._registre:
-            return self._verrous.setdefault(moteur, threading.Lock())
+        self.depot = depot if depot is not None else DepotMemoire()
 
     def _vecteur(self, mesures: Mapping[str, float | None]) -> np.ndarray:
         inconnues = sorted(set(mesures) - set(self.colonnes))
@@ -88,11 +69,14 @@ class ServiceDecision:
         return np.array([np.nan if v is None else v for v in valeurs], dtype="float64")
 
     def traiter_vol(self, moteur: str, cycle: int, mesures: Mapping[str, float | None]) -> dict:
-        """Ajoute un vol à l'historique du moteur et renvoie la recommandation."""
+        """Ajoute un vol à l'historique du moteur et renvoie la recommandation.
+
+        Tout est calculé sur des copies puis écrit en une fois : si un modèle échoue,
+        l'historique reste exactement dans son état précédent.
+        """
         x_brut = self._vecteur(mesures)
-        with self._verrou_moteur(moteur):
-            with self._registre:
-                historique = self._moteurs.setdefault(moteur, HistoriqueMoteur())
+        with self.depot.verrou(moteur):
+            historique = self.depot.lire(moteur) or HistoriqueMoteur()
             if historique.cycles and cycle <= historique.cycles[-1]:
                 raise ValueError(
                     f"Le cycle {cycle} doit être supérieur au dernier cycle reçu "
@@ -100,22 +84,21 @@ class ServiceDecision:
                 )
             proba = float(self.predire_proba(x_brut[None, :]))
             x_impute = np.where(np.isnan(x_brut), self.medianes, x_brut)
-            historique.cycles.append(int(cycle))
-            historique.vols.append(x_impute)
+            cycles = [*historique.cycles, int(cycle)]
+            vols = [*historique.vols, x_impute]
 
             # Pendant les vols de la ligne de base, l'autoencodeur ne peut pas encore juger.
-            if len(historique.vols) <= self.n_premiers:
+            if len(vols) <= self.n_premiers:
                 erreurs_vol = np.zeros(len(self.colonnes))
             else:
-                X_centre = self.centrer(np.vstack(historique.vols), np.array(historique.cycles))
+                X_centre = self.centrer(np.vstack(vols), np.array(cycles))
                 erreurs_vol = np.asarray(self.erreurs_ae(X_centre[-1][None, :]), dtype="float64")
-            erreur = float(erreurs_vol.mean())
 
-            historique.probas.append(proba)
-            historique.erreurs.append(erreur)
+            probas = [*historique.probas, proba]
+            erreurs = [*historique.erreurs, float(erreurs_vol.mean())]
             recommandation = decider(
-                np.array(historique.probas),
-                np.array(historique.erreurs),
+                np.array(probas),
+                np.array(erreurs),
                 seuil_ae=self.seuil_ae,
                 k_ae=self.k_ae,
                 capteurs=capteurs_en_cause(erreurs_vol, self.colonnes),
@@ -123,27 +106,31 @@ class ServiceDecision:
             resultat = {
                 "moteur": moteur,
                 "cycle": int(cycle),
-                "vols_recus": len(historique.cycles),
+                "vols_recus": len(cycles),
                 **recommandation.en_dict(),
             }
-            historique.recommandations.append(resultat)
-            historique.derniere = resultat
+            self.depot.ecrire(
+                moteur,
+                HistoriqueMoteur(
+                    cycles=cycles,
+                    vols=vols,
+                    probas=probas,
+                    erreurs=erreurs,
+                    recommandations=[*historique.recommandations, resultat],
+                    derniere=resultat,
+                ),
+            )
             return resultat
 
     def derniere(self, moteur: str) -> dict | None:
         """Dernière recommandation d'un moteur, ou None si le moteur est inconnu."""
-        historique = self._moteurs.get(moteur)
+        historique = self.depot.lire(moteur)
         return historique.derniere if historique else None
 
     def historique(self, moteur: str) -> list[dict] | None:
         """Toutes les recommandations d'un moteur, vol après vol, ou None s'il est inconnu."""
-        historique = self._moteurs.get(moteur)
+        historique = self.depot.lire(moteur)
         return list(historique.recommandations) if historique else None
-
-    def _copie_moteurs(self) -> list[tuple[str, HistoriqueMoteur]]:
-        """Instantané du registre, pour le parcourir sans bloquer les autres requêtes."""
-        with self._registre:
-            return list(self._moteurs.items())
 
     def etat_flotte(self) -> list[dict]:
         """Une ligne de synthèse par moteur, les plus urgents en premier."""
@@ -151,19 +138,18 @@ class ServiceDecision:
         lignes = [
             {
                 "moteur": moteur,
-                "vols_recus": len(h.cycles),
-                "niveau": h.derniere["niveau"],
-                "cycle": h.derniere["cycle"],
+                "vols_recus": derniere["vols_recus"],
+                "niveau": derniere["niveau"],
+                "cycle": derniere["cycle"],
             }
-            for moteur, h in self._copie_moteurs()
-            if h.derniere is not None
+            for moteur, derniere in self.depot.dernieres().items()
         ]
         return sorted(lignes, key=lambda ligne: (ordre.get(ligne["niveau"], 3), ligne["moteur"]))
 
     def reinitialiser(self, moteur: str) -> bool:
         """Oublie un moteur (par exemple après une révision). False s'il était inconnu."""
-        with self._verrou_moteur(moteur), self._registre:
-            return self._moteurs.pop(moteur, None) is not None
+        with self.depot.verrou(moteur):
+            return self.depot.supprimer(moteur)
 
 
 def charger_service(dossier: str | Path) -> ServiceDecision:
