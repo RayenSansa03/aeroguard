@@ -290,6 +290,12 @@
 
 ---
 
-- **Fait :** interface `DepotHistorique` + `DepotMemoire` ; `ServiceDecision` lit, calcule sur des copies et écrit en une fois ; correction de l'historique partiel quand un modèle échoue ; parité 76/76.
-- **Appris :** séparer « décider » et « ranger » permet de changer de stockage sans toucher au cœur ; écriture « tout ou rien » ; un test qui lit un attribut privé casse au premier refactor ; mise à jour perdue = lire/calculer/écrire sans verrou.
-- **Bloquant :** —
+- **Fait :** workflow `cd.yml` déclenché par un tag `v*` : CI complète réutilisée (`workflow_call`), build + smoke test avant publication, push des images API et dashboard sur GHCR, release GitHub avec notes générées ; première pré-version `v7.0.0-rc.1` publiée en 5 min 10 et vérifiée avec `docker pull`.
+- **Appris :** CI = vérifier, CD = livrer ; un tag est une étiquette fixe sur un commit ; SemVer MAJEUR.MINEUR.CORRECTIF et pré-versions `-rc.N` ; une rc ne reçoit jamais `latest` ; smoke test avant le push (porte de qualité) ; droits minimaux par job ; passer les valeurs `${{ }}` par `env:` contre l'injection de script ; un smoke test doit réessayer, car le serveur met quelques secondes à démarrer.
+- **Bloquant :** l'API annonce la version `0.1.0` au lieu du tag : à corriger en D6-B2.
+
+---
+
+- **Fait :** mode `onnx` (ONNX Runtime pour l'autoencodeur, `Booster.inplace_predict` pour XGBoost), choisi par `AEROGUARD_INFERENCE` ; 4 tests avec de vrais petits modèles ; parité 76/76 (1e-16) ; débit stable à 16 clients (39 req/s contre 19).
+- **Appris :** ONNX = format portable, même calcul sans TensorFlow ; `inplace_predict` utilise tous les arbres par défaut, il faut `iteration_range` jusqu'à `best_iteration` ; un thread par appel évite la sur-souscription ; les tests unitaires vérifient la mécanique, la parité vérifie la vérité.
+- **Bloquant :** ~28 ms par vol sous Windows même sans modèle lourd ; hypothèse d'un surcoût de la pile serveur Windows, à vérifier dans Docker.
