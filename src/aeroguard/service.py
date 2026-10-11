@@ -40,6 +40,7 @@ class HistoriqueMoteur:
     vols: list = field(default_factory=list)
     probas: list = field(default_factory=list)
     erreurs: list = field(default_factory=list)
+    recommandations: list = field(default_factory=list)
     derniere: dict | None = None
 
 
@@ -117,6 +118,7 @@ class ServiceDecision:
                 "vols_recus": len(historique.cycles),
                 **recommandation.en_dict(),
             }
+            historique.recommandations.append(resultat)
             historique.derniere = resultat
             return resultat
 
@@ -124,6 +126,11 @@ class ServiceDecision:
         """Dernière recommandation d'un moteur, ou None si le moteur est inconnu."""
         historique = self._moteurs.get(moteur)
         return historique.derniere if historique else None
+
+    def historique(self, moteur: str) -> list[dict] | None:
+        """Toutes les recommandations d'un moteur, vol après vol, ou None s'il est inconnu."""
+        historique = self._moteurs.get(moteur)
+        return list(historique.recommandations) if historique else None
 
     def etat_flotte(self) -> list[dict]:
         """Une ligne de synthèse par moteur, les plus urgents en premier."""

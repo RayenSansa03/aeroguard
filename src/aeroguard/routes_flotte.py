@@ -57,6 +57,15 @@ def consulter_moteur(moteur: str, service: Service) -> dict:
     return derniere
 
 
+@routeur.get("/moteurs/{moteur}/historique")
+def historique_moteur(moteur: str, service: Service) -> list[dict]:
+    """Toutes les recommandations d'un moteur, vol après vol (pour le tableau de bord)."""
+    historique = service.historique(moteur)
+    if historique is None:
+        raise HTTPException(status_code=404, detail=f"Moteur inconnu : {moteur}")
+    return historique
+
+
 @routeur.delete("/moteurs/{moteur}")
 def reinitialiser_moteur(moteur: str, service: Service) -> dict:
     """Oublie l'historique d'un moteur, par exemple après une révision."""
