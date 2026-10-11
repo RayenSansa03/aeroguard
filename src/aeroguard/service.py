@@ -231,7 +231,7 @@ def _charger_modeles(dossier: Path) -> ServiceDecision:  # pragma: no cover
     import xgboost
     from tensorflow import keras
 
-    from aeroguard.autoencodeurs import erreur_reconstruction, standardiser
+    from aeroguard.autoencodeurs import standardiser
     from aeroguard.hybride import centrer_par_moteur
 
     stats = np.load(dossier / FICHIERS_MODELES["stats"], allow_pickle=True)
@@ -247,8 +247,10 @@ def _charger_modeles(dossier: Path) -> ServiceDecision:  # pragma: no cover
         return xgb.predict_proba(pd.DataFrame(x, columns=colonnes))[0, 1]
 
     def erreurs_ae(x_centre):
+
         xn = standardiser(x_centre, stats["moyennes"], stats["ecarts"])
-        return erreur_reconstruction(autoencodeur, xn, par_feature=True)[0]
+        reconstruction = autoencodeur(xn, training=False).numpy()
+        return ((xn - reconstruction) ** 2)[0]
 
     def centrer(X, cycles):
         moteurs = np.zeros(len(cycles), dtype=int)
