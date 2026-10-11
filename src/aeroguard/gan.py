@@ -43,27 +43,41 @@ def creer_discriminateur(nombre_features, couches_cachees=(128, 64), taux_dropou
 
 
 def creer_etape_entrainement(
-    generateur, discriminateur, dim_bruit=DIM_BRUIT, taux_apprentissage=2e-4
+    generateur,
+    discriminateur,
+    dim_bruit=DIM_BRUIT,
+    taux_apprentissage=2e-4,
+    lissage_etiquettes=0.0,
+    taux_apprentissage_d=None,
 ):
-    """Renvoie une étape d'entraînement : 1 pas pour l'expert, puis 1 pas pour le faussaire."""
+    """Renvoie une étape d'entraînement : 1 pas pour l'expert, puis 1 pas pour le faussaire.
+
+    `lissage_etiquettes` : sur les vrais vols, l'expert vise 1 - lissage au lieu de 1.
+    `taux_apprentissage_d` : taux propre à l'expert (par défaut, le même que le faussaire).
+    """
     import tensorflow as tf
     from tensorflow import keras
 
+    if not 0 <= lissage_etiquettes < 0.5:
+        raise ValueError("lissage_etiquettes doit être compris entre 0 (inclus) et 0,5 (exclu).")
+    taux_d = taux_apprentissage if taux_apprentissage_d is None else taux_apprentissage_d
+    cible_vrais = 1.0 - lissage_etiquettes
+
     perte_bce = keras.losses.BinaryCrossentropy(from_logits=True)
-    optimiseur_d = keras.optimizers.Adam(learning_rate=taux_apprentissage, beta_1=0.5)
+    optimiseur_d = keras.optimizers.Adam(learning_rate=taux_d, beta_1=0.5)
     optimiseur_g = keras.optimizers.Adam(learning_rate=taux_apprentissage, beta_1=0.5)
 
     @tf.function
     def etape(vrais):
         n = tf.shape(vrais)[0]
 
-        # 1) L'expert apprend : vrais vols → 1, faux vols → 0
+        # 1) L'expert apprend : vrais vols → 1 (ou 1 - lissage), faux vols → 0
         bruit = tf.random.normal((n, dim_bruit))
         with tf.GradientTape() as bande_d:
             faux = generateur(bruit, training=True)
             logits_vrais = discriminateur(vrais, training=True)
             logits_faux = discriminateur(faux, training=True)
-            perte_d = perte_bce(tf.ones_like(logits_vrais), logits_vrais) + perte_bce(
+            perte_d = perte_bce(cible_vrais * tf.ones_like(logits_vrais), logits_vrais) + perte_bce(
                 tf.zeros_like(logits_faux), logits_faux
             )
         gradients_d = bande_d.gradient(perte_d, discriminateur.trainable_variables)
@@ -97,6 +111,8 @@ def entrainer_gan(
     taux_apprentissage=2e-4,
     graine=42,
     afficher_tous_les=100,
+    lissage_etiquettes=0.0,
+    taux_apprentissage_d=None,
 ):
     """Entraîne le GAN sur X (vrais vols standardisés). Renvoie l'historique par epoch."""
     import tensorflow as tf
@@ -112,7 +128,14 @@ def entrainer_gan(
         raise ValueError("epochs doit être supérieur ou égal à 1.")
 
     tf.random.set_seed(graine)
-    etape = creer_etape_entrainement(generateur, discriminateur, dim_bruit, taux_apprentissage)
+    etape = creer_etape_entrainement(
+        generateur,
+        discriminateur,
+        dim_bruit,
+        taux_apprentissage,
+        lissage_etiquettes=lissage_etiquettes,
+        taux_apprentissage_d=taux_apprentissage_d,
+    )
     jeu = (
         tf.data.Dataset.from_tensor_slices(X)
         .shuffle(len(X), seed=graine, reshuffle_each_iteration=True)
