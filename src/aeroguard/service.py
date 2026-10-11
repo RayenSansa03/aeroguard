@@ -17,6 +17,7 @@ FICHIERS_MODELES = {
     "stats": "autoencodeur_centre_v5_stats.npz",
     "config": "autoencodeur_centre_v5_alerte.json",
 }
+FICHIER_ONNX = "autoencodeur_centre_v5.onnx"
 
 
 def capteurs_en_cause(erreurs_vol, colonnes, nombre=2):
@@ -194,6 +195,71 @@ def charger_service_triton(dossier: str | Path, url: str, client=None) -> Servic
         # Même calcul que autoencodeurs.erreur_reconstruction (par_feature=True), en float32.
         xn = standardiser(x_centre, moyennes, ecarts)
         return ((xn - client.reconstruction(xn)) ** 2)[0]
+
+    def centrer(X, cycles):
+        moteurs = np.zeros(len(cycles), dtype=int)
+        return centrer_par_moteur(X, moteurs, cycles, n_premiers=config["n_premiers"])
+
+    return ServiceDecision(
+        colonnes=[str(c) for c in stats["colonnes"]],
+        predire_proba=predire_proba,
+        erreurs_ae=erreurs_ae,
+        centrer=centrer,
+        medianes=stats["medianes_imputation"],
+        seuil_ae=config["seuil"],
+        k_ae=config["k"],
+        n_premiers=config["n_premiers"],
+    )
+
+
+def charger_service_onnx(dossier: str | Path) -> ServiceDecision:
+    """Construit le service avec ONNX Runtime (autoencodeur) et XGBoost CPU (alerte).
+
+    Mode léger destiné à l'hébergement : ni TensorFlow ni Triton, mêmes calculs que les
+    autres modes. Un seul thread par appel : le parallélisme vient des requêtes.
+    """
+    import onnxruntime as ort
+    import xgboost
+
+    from aeroguard.autoencodeurs import standardiser
+    from aeroguard.hybride import centrer_par_moteur
+
+    dossier = Path(dossier)
+    requis = [
+        FICHIERS_MODELES["alerte"],
+        FICHIER_ONNX,
+        FICHIERS_MODELES["stats"],
+        FICHIERS_MODELES["config"],
+    ]
+    manquants = [nom for nom in requis if not (dossier / nom).exists()]
+    if manquants:
+        raise FileNotFoundError(f"Fichiers de modèles manquants dans {dossier} : {manquants}")
+
+    stats = np.load(dossier / FICHIERS_MODELES["stats"], allow_pickle=True)
+    config = json.loads((dossier / FICHIERS_MODELES["config"]).read_text(encoding="utf-8"))
+    moyennes, ecarts = stats["moyennes"], stats["ecarts"]
+
+    booster = xgboost.Booster()
+    booster.load_model(str(dossier / FICHIERS_MODELES["alerte"]))
+    booster.set_param({"nthread": 1})
+    # Même nombre d'arbres que XGBClassifier.predict_proba après early stopping.
+    meilleure = booster.attr("best_iteration")
+    plage = (0, int(meilleure) + 1) if meilleure is not None else (0, 0)
+
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    session = ort.InferenceSession(
+        str(dossier / FICHIER_ONNX), options, providers=["CPUExecutionProvider"]
+    )
+    entree = session.get_inputs()[0].name
+
+    def predire_proba(x):
+        return float(booster.inplace_predict(x, iteration_range=plage)[0])
+
+    def erreurs_ae(x_centre):
+        xn = standardiser(x_centre, moyennes, ecarts).astype(np.float32)
+        reconstruction = session.run(None, {entree: xn})[0]
+        return ((xn - reconstruction) ** 2)[0]
 
     def centrer(X, cycles):
         moteurs = np.zeros(len(cycles), dtype=int)
