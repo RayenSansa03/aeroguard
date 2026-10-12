@@ -1,5 +1,6 @@
 """Routes HTTP de la flotte : envoyer un vol, consulter ou réinitialiser un moteur."""
 
+import logging
 import os
 from functools import lru_cache
 from typing import Annotated, Any
@@ -8,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 routeur = APIRouter(prefix="/flotte", tags=["flotte"])
+journal_decisions = logging.getLogger("aeroguard.decision")
 
 
 class Vol(BaseModel):
@@ -64,9 +66,21 @@ Service = Annotated[Any, Depends(obtenir_service)]
 def recevoir_vol(vol: Vol, service: Service) -> dict:
     """Ajoute un vol à l'historique du moteur et renvoie la recommandation."""
     try:
-        return service.traiter_vol(vol.moteur, vol.cycle, vol.mesures)
+        resultat = service.traiter_vol(vol.moteur, vol.cycle, vol.mesures)
     except ValueError as erreur:
         raise HTTPException(status_code=422, detail=str(erreur)) from erreur
+    journal_decisions.info(
+        "decision",
+        extra={
+            "champs": {
+                "engine": vol.moteur,
+                "cycle": vol.cycle,
+                "decision": resultat.get("niveau"),
+                "wear_probability": resultat.get("proba_usure"),
+            }
+        },
+    )
+    return resultat
 
 
 @routeur.get("/moteurs")
