@@ -302,6 +302,12 @@
 
 ---
 
-- **Fait :** API hébergée sur Render  ; parité 76/76 sur l'URL publique ; job `deploy` dans `cd.yml` (deploy hook avec la version exacte de l'image, smoke test public sur la version, release seulement après déploiement) ; secret dans l'environnement GitHub `production` limité aux tags `v*` ; `v7.0.0-rc.3` déployée automatiquement.
+- **Fait :** API hébergée sur Render ; parité 76/76 sur l'URL publique ; job `deploy` dans `cd.yml` (deploy hook avec la version exacte de l'image, smoke test public sur la version, release seulement après déploiement) ; secret dans l'environnement GitHub `production` limité aux tags `v*` ; `v7.0.0-rc.3` déployée automatiquement.
 - **Appris :** vérifier les conditions d'un hébergeur au lieu de les supposer ; mesurer la mémoire avant de choisir un plan ; une URL ne se devine pas (`aeroguard-api` était déjà pris) ; un smoke test vérifie la version exacte, pas seulement « quelque chose répond » ; un deploy hook est un secret ; environnements GitHub = coffre-fort par cible.
 - **Bloquant :** l'historique des moteurs est perdu à chaque mise en veille de Render (état en mémoire) → solution prévue en 7.6-E2 (Redis), optionnelle.
+
+---
+
+- **Fait :** route `/monitoring/derive` (fenêtre des derniers vols imputés, limite bornée, référence téléchargée avec les modèles) ; règle « au moins 5 moteurs » ; démo : 1 moteur → 125/126 features en dérive forte (fausse alarme), flotte de 21 moteurs → 20 fortes, presque toutes des températures.
+- **Appris :** un échantillon non représentatif crée de fausses alarmes ; le nombre de vols ne suffit pas, il faut aussi un minimum de moteurs ; la dérive des températures (T48, T50) sur une flotte vieillissante, c'est l'érosion de la marge d'EGT, une dérive réelle mais attendue ; une alerte de dérive appelle une enquête, jamais un ré-entraînement automatique.
+- **Bloquant :** —
