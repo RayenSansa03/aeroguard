@@ -1,4 +1,4 @@
-"""API AeroGuard : premier squelette. Les endpoints de prédiction arrivent au module 7."""
+"""API AeroGuard : santé du service et routes de la flotte."""
 
 import os
 from importlib.metadata import PackageNotFoundError, version
@@ -9,7 +9,14 @@ from aeroguard.routes_flotte import routeur as routeur_flotte
 
 
 def version_aeroguard():
-    """Version du package installé (lue dans pyproject.toml au moment de l'installation)."""
+    """Version livrée.
+
+    Dans l'image Docker, AEROGUARD_VERSION est injectée au build depuis le tag Git : c'est
+    la seule source de vérité. En dehors de Docker, on lit la version du package installé.
+    """
+    injectee = os.getenv("AEROGUARD_VERSION")
+    if injectee:
+        return injectee
     try:
         return version("aeroguard")
     except PackageNotFoundError:
@@ -33,7 +40,7 @@ def accueil():
 
 @app.get("/health")
 def sante():
-    """Le service répond-il ? Utilisé par Docker (HEALTHCHECK) et plus tard par le monitoring."""
+    """Le service répond-il ? Utilisé par Docker (HEALTHCHECK) et par le monitoring."""
     return {
         "statut": "ok",
         "version": version_aeroguard(),
