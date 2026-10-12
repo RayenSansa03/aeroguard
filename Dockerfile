@@ -1,4 +1,3 @@
-
 # ---------- Stage 1 : build ----------
 FROM python:3.13-slim AS builder
 
@@ -24,13 +23,21 @@ RUN pip uninstall -y pip
 # ---------- Stage 2 : runtime ----------
 FROM python:3.13-slim AS runtime
 
-# Configuration de l'environnement Python
+# Version livrée, injectée au build depuis le tag Git (voir cd.yml)
+ARG AEROGUARD_VERSION=dev
+
+# Configuration de l'environnement Python et du service
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    AEROGUARD_VERSION=${AEROGUARD_VERSION} \
+    AEROGUARD_INFERENCE=onnx \
+    AEROGUARD_MODELES=/app/models
 
-# Utilisateur non privilégié et suppression de pip de l'image de base
+# Utilisateur non privilégié, dossier des modèles à lui, suppression de pip de l'image de base
 RUN useradd --create-home --uid 1000 aeroguard \
+    && mkdir -p /app/models \
+    && chown aeroguard:aeroguard /app/models \
     && /usr/local/bin/python -m pip uninstall -y pip
 
 # Récupération de l'environnement construit au stage précédent

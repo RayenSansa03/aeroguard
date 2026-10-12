@@ -22,16 +22,26 @@ class Vol(BaseModel):
 def obtenir_service():
     """Charge le service une seule fois, au premier appel (chargement paresseux).
 
+    Si AEROGUARD_HF_DEPOT est défini, les modèles sont d'abord téléchargés depuis ce dépôt
+    Hugging Face (révision AEROGUARD_HF_REVISION, token HF_TOKEN) dans AEROGUARD_MODELES.
+
     Mode d'inférence, par ordre de priorité :
     - AEROGUARD_TRITON_URL défini : les modèles tournent dans Triton ;
     - AEROGUARD_INFERENCE=onnx : ONNX Runtime et XGBoost CPU dans l'API (hébergement léger) ;
     - sinon : TensorFlow et XGBoost dans l'API (développement).
-    Les fichiers des modèles sont lus dans AEROGUARD_MODELES.
     """
     dossier = os.environ.get("AEROGUARD_MODELES", "local/models")
     url_triton = os.environ.get("AEROGUARD_TRITON_URL")
     inference = os.environ.get("AEROGUARD_INFERENCE", "local")
+    depot_hf = os.environ.get("AEROGUARD_HF_DEPOT")
     try:
+        if depot_hf:
+            from aeroguard import modeles_hf
+
+            modeles_hf.telecharger_modeles(
+                depot_hf, dossier, revision=os.environ.get("AEROGUARD_HF_REVISION")
+            )
+
         from aeroguard.service import (
             charger_service,
             charger_service_onnx,
