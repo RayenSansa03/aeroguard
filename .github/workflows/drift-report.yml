@@ -1,0 +1,41 @@
+name: Weekly drift report
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    name: Drift report on the live API
+    runs-on: ubuntu-latest
+    env:
+      API_URL: https://aeroguard-api-75tq.onrender.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the monitoring client only
+        run: |
+          pip install httpx
+          pip install --no-deps -e .
+
+      - name: Fetch the drift report
+        id: rapport
+        run: python scripts/rapport_derive_ci.py --url "$API_URL" --sortie rapport_derive.md
+
+      - name: Publish the job summary
+        run: cat rapport_derive.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open an issue on major drift
+        if: steps.rapport.outputs.status == 'major'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "Major data drift detected" --body-file rapport_derive.md
