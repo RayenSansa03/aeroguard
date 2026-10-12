@@ -85,9 +85,46 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: AEROGUARD_VERSION=${{ steps.meta.outputs.version }}
 
+  deploy:
+    name: Deploy API to Render
+    needs: publish
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://aeroguard-api-75tq.onrender.com
+    env:
+      API_URL: https://aeroguard-api-75tq.onrender.com
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Trigger the deploy hook with the new image
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          VERSION="${TAG#v}"
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/$OWNER/aeroguard-api:$VERSION"
+          ENCODED=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMAGE")
+          curl -fsS -X POST "$DEPLOY_HOOK&imgURL=$ENCODED" > /dev/null
+          echo "Deploy requested for $IMAGE"
+
+      - name: Smoke test on the public URL
+        run: |
+          VERSION="${TAG#v}"
+          for _ in $(seq 1 60); do
+            if curl -fsS "$API_URL/health" | grep -q "\"version\":\"$VERSION\""; then
+              curl -fsS "$API_URL/flotte/moteurs"
+              echo
+              echo "Render serves $VERSION and its models are reachable."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Render did not serve $VERSION within 10 minutes."
+          exit 1
+
   release:
     name: GitHub release
-    needs: publish
+    needs: deploy
     runs-on: ubuntu-latest
     permissions:
       contents: write
