@@ -311,3 +311,9 @@
 - **Fait :** route `/monitoring/derive` (fenêtre des derniers vols imputés, limite bornée, référence téléchargée avec les modèles) ; règle « au moins 5 moteurs » ; démo : 1 moteur → 125/126 features en dérive forte (fausse alarme), flotte de 21 moteurs → 20 fortes, presque toutes des températures.
 - **Appris :** un échantillon non représentatif crée de fausses alarmes ; le nombre de vols ne suffit pas, il faut aussi un minimum de moteurs ; la dérive des températures (T48, T50) sur une flotte vieillissante, c'est l'érosion de la marge d'EGT, une dérive réelle mais attendue ; une alerte de dérive appelle une enquête, jamais un ré-entraînement automatique.
 - **Bloquant :** —
+
+---
+
+- **Fait :** module `sante_systeme.py` (client de monitoring testé avec `httpx.MockTransport`, résumé Markdown) ; page Streamlit System Health (statut, version, mode d'inférence, latence aller-retour et serveur, dérive avec slider) ; workflow hebdomadaire (cron du lundi + bouton manuel) qui publie le rapport et ouvre une issue en cas de dérive forte ; premier rapport en production : 8 moteurs, 341 vols, dérive forte sur la phase de montée.
+- **Appris :** monitoring as code ; le rapport vient à toi au lieu d'attendre qu'on ouvre un dashboard ; `for … else` et `GITHUB_OUTPUT` ; installer un package `--no-deps` pour un job léger ; un rapport doit dire « données insuffisantes » plutôt qu'inventer ; une alerte par lundi = fatigue d'alerte → une seule issue ouverte par sujet ; une alerte se clôt par une conclusion écrite.
+- **Bloquant :** l'historique est perdu à chaque mise en veille de Render (rapport souvent « Not enough engines ») → 7.6-E2 (Redis), optionnelle.

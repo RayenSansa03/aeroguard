@@ -6,267 +6,335 @@
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/RayenSansa03/aeroguard/network/updates)
 
-Système de détection d'anomalies pour une flotte de moteurs d'avion, construit sur les données NASA N-CMAPSS et accéléré par GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
+Anomaly detection system for a fleet of aircraft engines, built on NASA N-CMAPSS data and accelerated on GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
 
-## Objectifs
+> **Note on figures:** the figures come from the original lab notebooks, so their labels are in French. Each figure is followed by a short "How to read this figure" note explaining the axes, colors and French labels.
 
-- Détecter le début d'une panne le plus tôt possible
-- Identifier le composant touché (fan, compresseur, turbine)
-- Repérer les pannes jamais vues à l'entraînement
+**Sensor names used in the figures:** T = temperature (T24, T30, T48, T50), P = pressure (P2, P15, P21, P24, Ps30, P40, P50), Nf = fan speed, Nc = core speed, Wf = fuel flow. Feature suffixes: `_montee` = climb phase, `_croisiere` = cruise phase.
 
-## Aperçu
+## Goals
 
-Chaque courbe est un moteur : la température T48 reste stable, puis s'emballe dans les 30 à 40 derniers vols avant la panne. L'objectif d'AeroGuard est de repérer ce décollage le plus tôt possible.
+- Detect the onset of a failure as early as possible
+- Identify the affected component (fan, compressor, turbine)
+- Spot failures never seen during training
 
-![Température T48 en fonction des vols restants avant la panne](results/figures/01_T48_vs_rul.png)
+## Overview
 
-## Premiers résultats : baseline par score z (flotte simulée)
+Each curve is one engine: the T48 temperature stays stable, then takes off in the last 30 to 40 flights before failure. AeroGuard's goal is to spot this take-off as early as possible.
 
-Le « normal » est appris sur les vols sains de 5 moteurs ; la détection est testée sur 5 autres moteurs, jamais vus.
+![T48 temperature versus flights remaining before failure](results/figures/01_T48_vs_rul.png)
 
-| Seuil z | Retard moyen de détection | Avance d'alerte moyenne | Fausses alarmes |
-| ------- | ------------------------- | ----------------------- | --------------- |
-| 2,5     | 11,4 vols                 | 28,8 vols               | 3               |
-| **3**   | **13,4 vols**             | **26,8 vols**           | **1**           |
-| 4       | 18,8 vols                 | 21,4 vols               | 0               |
+> **How to read this figure**
+> - **X-axis:** flights remaining before failure (the RUL). The axis is reversed, so time moves from left to right and **0 = failure** is on the right. Label: *"Vols restants avant la panne (0 = panne)"* = "Flights remaining before failure (0 = failure)".
+> - **Y-axis:** T48 temperature in °C (gas temperature between the high-pressure and low-pressure turbines).
+> - **Lines:** each gray line is one engine of the simulated fleet.
+> - **Title:** *"T48 en fonction des vols restants avant la panne"* = "T48 versus flights remaining before failure".
 
-Cette baseline sert de référence : les modèles suivants (XGBoost, autoencodeur) devront détecter l'usure plus tôt.
+## First results: z-score baseline (simulated fleet)
 
-## ⚡ Accélération GPU (RAPIDS cuDF)
+"Normal" is learned on the healthy flights of 5 engines; detection is tested on 5 other engines, never seen before.
 
-Préparation des données N-CMAPSS DS01 (4,9 millions de lignes), GPU NVIDIA T4 (Google Colab) :
+| z threshold | Mean detection delay | Mean alert lead time | False alarms |
+| ----------- | -------------------- | -------------------- | ------------ |
+| 2.5         | 11.4 flights         | 28.8 flights         | 3            |
+| **3**       | **13.4 flights**     | **26.8 flights**     | **1**        |
+| 4           | 18.8 flights         | 21.4 flights         | 0            |
 
-| Tâche              | pandas (CPU) | cuDF (GPU) | Gain  |
-| ------------------ | ------------ | ---------- | ----- |
-| Lecture parquet    | 1.954 s      | 0.413 s    | ×4.7  |
-| Moyenne par vol    | 0.407 s      | 0.086 s    | ×4.7  |
-| Features par phase | 2.065 s      | 0.106 s    | ×19.5 |
+This baseline is the reference: the next models (XGBoost, autoencoder) must detect wear earlier.
+
+## ⚡ GPU acceleration (RAPIDS cuDF)
+
+Data preparation of N-CMAPSS DS01 (4.9 million rows), NVIDIA T4 GPU (Google Colab):
+
+| Task               | pandas (CPU) | cuDF (GPU) | Speed-up |
+| ------------------ | ------------ | ---------- | -------- |
+| Read parquet       | 1.954 s      | 0.413 s    | ×4.7     |
+| Mean per flight    | 0.407 s      | 0.086 s    | ×4.7     |
+| Features per phase | 2.065 s      | 0.106 s    | ×19.5    |
 
 ![CPU vs GPU](results/figures/19_cpu_vs_gpu.png)
 
-## ✈️ v1 — Pipeline complet N-CMAPSS
+> **How to read this figure**
+> - **X-axis:** the three data-preparation tasks. *"Lecture parquet"* = "Read parquet", *"Moyenne par vol"* = "Mean per flight", *"Features par phase"* = "Features per phase".
+> - **Y-axis:** execution time in seconds (*"temps (s)"* = "time (s)"). **Lower is faster.**
+> - **Bars:** blue = pandas on CPU, orange = cuDF on GPU.
+> - **Title:** *"pandas (CPU) vs cuDF (GPU T4) — 4,9 millions de lignes"* = "… 4.9 million rows".
 
-- **9 fichiers NASA** (DS01 à DS08c), **7 familles de panne** (11 modes détaillés), **99 moteurs**, **7 473 vols**
-- Une ligne par vol : 126 features (résidus par phase de vol) + étiquettes (hs, RUL, mode et famille de panne)
-- Découpage par moteur : 49 train / 11 validation / 39 test, sans fuite, vérifié automatiquement
-- 42 tests automatiques (pytest + GitHub Actions)
-- DS08d exclu : fichier tronqué dans l'archive officielle NASA (CRC correct, données incomplètes)
+## ✈️ v1 — Full N-CMAPSS pipeline
 
-![Signatures des pannes](results/figures/110_signatures_pannes.png)
+- **9 NASA files** (DS01 to DS08c), **7 failure families** (11 detailed modes), **99 engines**, **7,473 flights**
+- One row per flight: 126 features (residuals per flight phase) + labels (hs, RUL, failure mode and family)
+- Split by engine: 49 train / 11 validation / 39 test, with no leakage, checked automatically
+- 42 automated tests (pytest + GitHub Actions)
+- DS08d excluded: truncated file in the official NASA archive (correct CRC, incomplete data)
 
-**Ce que montrent les signatures :** compresseurs abîmés → T30 et Nc montent ; turbines abîmées → T48/T50 montent et Nc baisse ; fan abîmé → les pressions P15, P21 et P24 chutent.
+![Failure signatures](results/figures/110_signatures_pannes.png)
 
-## 🤖 v2 — Machine learning et métriques
+> **How to read this figure** (heatmap)
+> - **X-axis (columns):** the 14 engine sensors, averaged over the climb phase.
+> - **Y-axis (rows):** one row per failure family.
+> - **Color:** how much each sensor changed at end of life compared with the start of life, as a z-score (mean of the last 10 flights before failure minus mean of the first 10 flights, divided by the standard deviation of the first 10). **Red = the sensor rises, blue = it drops, white = no change.** Color-bar label: *"score z (fin de vie vs début)"* = "z-score (end of life vs start)".
+> - **Title:** *"Signature de chaque panne (moyenne en montée)"* = "Signature of each failure (mean during climb)".
 
-Six modèles comparés sur **11 moteurs de validation jamais vus** à l'entraînement (819 vols). Métrique principale : **F1 macro**, qui juge équitablement les vols sains et les vols usés.
+**What the signatures show:** damaged compressors → T30 and Nc rise; damaged turbines → T48/T50 rise and Nc drops; damaged fan → pressures P15, P21 and P24 drop.
 
-**Par vol**
+## 🤖 v2 — Machine learning and metrics
 
-| Modèle                           | F1 macro  | PR-AUC | Rappel    | Fausses alarmes | Pannes ratées |
-| -------------------------------- | --------- | ------ | --------- | --------------- | ------------- |
-| **Régression logistique**        | **0,886** | 0,987  | 0,932     | 39              | 39            |
-| Random Forest                    | 0,844     | 0,985  | **0,951** | 73              | **28**        |
-| KNN                              | 0,763     | 0,903  | 0,843     | 75              | 90            |
-| Isolation Forest (non supervisé) | 0,663     | 0,915  | 0,581     | 29              | 241           |
-| Modèle naïf (référence)          | 0,412     | 0,702  | 1,000     | 244             | 0             |
+Six models compared on **11 validation engines never seen during training** (819 flights). Main metric: **macro F1**, which judges healthy and worn flights fairly.
 
-**Par moteur** (ce qui compte pour une compagnie aérienne), alerte confirmée sur 3 vols consécutifs
+**Per flight**
 
-| Modèle                    | Moteurs prévenus | Avance moyenne             | Fausses alarmes |
-| ------------------------- | ---------------- | -------------------------- | --------------- |
-| **Régression logistique** | **11 / 11**      | **46 vols avant la panne** | **9**           |
-| Random Forest             | 11 / 11          | 48 vols                    | 31              |
-| Isolation Forest          | 11 / 11          | 25 vols                    | 3               |
+| Model                          | Macro F1  | PR-AUC | Recall    | False alarms | Missed failures |
+| ------------------------------ | --------- | ------ | --------- | ------------ | --------------- |
+| **Logistic regression**        | **0.886** | 0.987  | 0.932     | 39           | 39              |
+| Random Forest                  | 0.844     | 0.985  | **0.951** | 73           | **28**          |
+| KNN                            | 0.763     | 0.903  | 0.843     | 75           | 90              |
+| Isolation Forest (unsupervised)| 0.663     | 0.915  | 0.581     | 29           | 241             |
+| Naive model (reference)        | 0.412     | 0.702  | 1.000     | 244          | 0               |
 
-**Modèle retenu :** régression logistique avec confirmation sur 3 vols. Elle prévient pour tous les moteurs, environ 46 vols avant la panne, avec 3 fois moins de fausses alarmes que la Random Forest.
+**Per engine** (what matters to an airline), alert confirmed over 3 consecutive flights
 
-**Ce qu'on a appris :**
+| Model                   | Engines warned | Mean lead time                | False alarms |
+| ----------------------- | -------------- | ----------------------------- | ------------ |
+| **Logistic regression** | **11 / 11**    | **46 flights before failure** | **9**        |
+| Random Forest           | 11 / 11        | 48 flights                    | 31           |
+| Isolation Forest        | 11 / 11        | 25 flights                    | 3            |
 
-- Un modèle naïf atteint 70 % d'exactitude sans rien détecter : l'exactitude seule est trompeuse.
-- Les features les plus importantes (T48 et T50 en montée) correspondent à la signature physique de l'usure des turbines.
-- Le non supervisé (Isolation Forest) prévient tous les moteurs mais tard : c'est la motivation de l'autoencodeur (v5).
+**Selected model:** logistic regression with 3-flight confirmation. It warns for every engine, about 46 flights before failure, with 3 times fewer false alarms than the Random Forest.
 
-Détail de toutes les expériences : [`docs/baselines.md`](docs/baselines.md).
+**What we learned:**
 
-## ⚡ v3 — XGBoost sur GPU
+- A naive model reaches 70% accuracy without detecting anything: accuracy alone is misleading.
+- The most important features (T48 and T50 during climb) match the physical signature of turbine wear.
+- The unsupervised model (Isolation Forest) warns every engine, but late: this motivates the autoencoder (v5).
 
-Évaluation finale, une seule fois, sur **39 moteurs de test jamais vus** (réglages figés sur la validation).
+Details of all experiments: [`docs/baselines.md`](docs/baselines.md).
 
-**Alerte « ce moteur s'use »** (alerte confirmée sur 3 vols)
+## ⚡ v3 — XGBoost on GPU
 
-| Modèle                           | Moteurs prévenus | Avance moyenne             | Fausses alarmes    |
-| -------------------------------- | ---------------- | -------------------------- | ------------------ |
-| Régression logistique (v2)       | 39 / 39          | 44,7 vols                  | 54 (12 moteurs)    |
-| **XGBoost GPU, seuil 0,81 (v3)** | **39 / 39**      | **40 vols avant la panne** | **28 (4 moteurs)** |
+Final evaluation, run only once, on **39 test engines never seen before** (settings frozen on validation).
 
-**Diagnostic « quel composant ? »** (7 familles de panne) : 37 moteurs sur 39 bien diagnostiqués par XGBoost, 35 / 39 par la logistique.
+**"This engine is wearing out" alert** (alert confirmed over 3 flights)
 
-**Face à une panne jamais vue** (une famille retirée de l'entraînement) :
+| Model                                | Engines warned | Mean lead time                | False alarms        |
+| ------------------------------------ | -------------- | ----------------------------- | ------------------- |
+| Logistic regression (v2)             | 39 / 39        | 44.7 flights                  | 54 (12 engines)     |
+| **XGBoost GPU, threshold 0.81 (v3)** | **39 / 39**    | **40 flights before failure** | **28 (4 engines)**  |
 
-- l'alerte détecte encore tous les moteurs pour 6 familles sur 7, mais devient presque aveugle à une panne de fan (2 moteurs sur 4 prévenus) ;
-- le diagnostic se trompe alors avec ~90 % de confiance : un modèle supervisé ne sait pas dire « inconnu ». C'est la motivation de l'autoencodeur (v5).
+**"Which component?" diagnosis** (7 failure families): 37 engines out of 39 correctly diagnosed by XGBoost, 35 / 39 by the logistic regression.
 
-**Vitesse** : sur 371 600 vols, l'entraînement XGBoost est **4,3 fois plus rapide sur GPU** (12 s contre 53 s sur CPU).
+**Facing a never-seen failure** (one family removed from training):
 
-## 🧠 v4 — Deep learning (TensorFlow) : réseau dense et CNN 1D
+- the alert still detects every engine for 6 families out of 7, but becomes almost blind to a fan failure (2 engines out of 4 warned);
+- the diagnosis is then wrong with ~90% confidence: a supervised model cannot say "unknown". This motivates the autoencoder (v5).
 
-Évaluation finale sur les **39 moteurs de test** (réglages figés sur la validation), avec un intervalle de confiance à 95 % obtenu par **bootstrap sur les moteurs** (1 000 flottes tirées au hasard).
+**Speed**: on 371,600 flights, XGBoost training is **4.3 times faster on GPU** (12 s versus 53 s on CPU).
 
-| Modèle                                  | F1 macro [IC 95 %]    | Moteurs prévenus | Avance moyenne | Fausses alarmes    | Prédiction (2 938 vols) |
-| --------------------------------------- | --------------------- | ---------------- | -------------- | ------------------ | ----------------------- |
-| **XGBoost (v3)**                        | **0,852** [0,83–0,87] | **39 / 39**      | 40,1 vols      | **28 (4 moteurs)** | 0,02 s                  |
-| Régression logistique                   | 0,840 [0,81–0,86]     | 39 / 39          | 44,7 vols      | 54 (12 moteurs)    | 0,007 s                 |
-| Réseau dense (10 241 poids)             | 0,823 [0,80–0,85]     | 39 / 39          | 41,3 vols      | 51 (11 moteurs)    | 0,08 s                  |
-| CNN 1D sur signaux bruts (47 265 poids) | 0,743 [0,68–0,80]     | 37 / 39          | 32,0 vols      | 35 (6 moteurs)     | 3,1 s                   |
+## 🧠 v4 — Deep learning (TensorFlow): dense network and 1D CNN
 
-![Classement final sur le test](results/figures/47_classement_test.png)
+Final evaluation on the **39 test engines** (settings frozen on validation), with a 95% confidence interval obtained by **bootstrapping over engines** (1,000 randomly drawn fleets).
 
-- **XGBoost reste le modèle d'alerte.** L'écart avec la logistique n'est pas prouvé (−0,013, intervalle [−0,038 ; +0,011]) ; XGBoost est gardé pour ses fausses alarmes divisées par 2.
-- Le réseau dense et le CNN sont **significativement** derrière XGBoost (écarts −0,029 et −0,108, intervalles qui excluent 0).
-- Le CNN, qui ne voit que le signal brut, **égale XGBoost sur les pannes de turbine** (HPT+LPT : 0,867 contre 0,857) mais **échoue sur le fan** (0,288 contre 0,777) : la signature du fan est une faible variation de pression, noyée dans les conditions de vol.
-- Leçon : avec 49 moteurs d'entraînement, de bonnes features physiques battent le deep learning. Pistes : plus de fenêtres par vol, entrées en résidus.
+| Model                                 | Macro F1 [95% CI]     | Engines warned | Mean lead time | False alarms        | Prediction (2,938 flights) |
+| ------------------------------------- | --------------------- | -------------- | -------------- | ------------------- | -------------------------- |
+| **XGBoost (v3)**                      | **0.852** [0.83–0.87] | **39 / 39**    | 40.1 flights   | **28 (4 engines)**  | 0.02 s                     |
+| Logistic regression                   | 0.840 [0.81–0.86]     | 39 / 39        | 44.7 flights   | 54 (12 engines)     | 0.007 s                    |
+| Dense network (10,241 weights)        | 0.823 [0.80–0.85]     | 39 / 39        | 41.3 flights   | 51 (11 engines)     | 0.08 s                     |
+| 1D CNN on raw signals (47,265 weights)| 0.743 [0.68–0.80]     | 37 / 39        | 32.0 flights   | 35 (6 engines)      | 3.1 s                      |
 
-## 🗂️ MLOps : registre de modèles MLflow
+![Final ranking on the test set](results/figures/47_classement_test.png)
 
-Le modèle d'alerte de production est désigné dans le **registre MLflow** sous le nom `aeroguard-alerte`, et chargé par son alias, jamais par un nom de fichier :
+> **How to read this figure** (two panels)
+> - **Left panel:** the **X-axis** is the macro F1 on the test set; the **Y-axis** lists the models, from worst at the bottom to best at the top. Each dot is the score and each horizontal bar is its 95% confidence interval. Label: *"F1 macro sur le test (intervalle à 95 %)"* = "Macro F1 on the test set (95% interval)". Model names: *logistique* = logistic regression, *reseau_dense* = dense network. Title: *"Classement final — 39 moteurs de test"* = "Final ranking — 39 test engines".
+> - **Right panel:** the **X-axis** is the macro F1 of one randomly drawn fleet (*"F1 macro d'une flotte tirée au hasard"*); the **Y-axis** is the number of draws (*"nombre de tirages"*). One colored histogram per model. **Overlapping histograms = the difference between the two models is not proven.** Title: *"1 000 flottes bootstrap"* = "1,000 bootstrap fleets".
+
+- **XGBoost remains the alert model.** The gap with the logistic regression is not proven (−0.013, interval [−0.038; +0.011]); XGBoost is kept because it halves the false alarms.
+- The dense network and the CNN are **significantly** behind XGBoost (gaps of −0.029 and −0.108, with intervals that exclude 0).
+- The CNN, which only sees the raw signal, **matches XGBoost on turbine failures** (HPT+LPT: 0.867 versus 0.857) but **fails on the fan** (0.288 versus 0.777): the fan signature is a small pressure variation, drowned in the flight conditions.
+- Lesson: with 49 training engines, good physical features beat deep learning. Next ideas: more windows per flight, residuals as inputs.
+
+## 🗂️ MLOps: MLflow model registry
+
+The production alert model is registered in the **MLflow registry** under the name `aeroguard-alerte`, and loaded by its alias, never by a file name:
 
 ```python
 modele = mlflow.xgboost.load_model("models:/aeroguard-alerte@champion")
 ```
 
-| Version | Alias         | Modèle                | Seuil | F1 macro test [IC 95 %] |
-| ------- | ------------- | --------------------- | ----- | ----------------------- |
-| 2       | **@champion** | XGBoost (v3)          | 0,81  | 0,852 [0,827 ; 0,874]   |
-| 1       | @challenger   | Régression logistique | 0,50  | 0,840 [0,814 ; 0,862]   |
+| Version | Alias         | Model               | Threshold | Test macro F1 [95% CI] |
+| ------- | ------------- | ------------------- | --------- | ---------------------- |
+| 2       | **@champion** | XGBoost (v3)        | 0.81      | 0.852 [0.827; 0.874]   |
+| 1       | @challenger   | Logistic regression | 0.50      | 0.840 [0.814; 0.862]   |
 
-![Registre MLflow](results/figures/D4_registre_mlflow.png)
+![MLflow registry](results/figures/D4_registre_mlflow.png)
 
-- Chaque version porte sa **notice** : seuil, confirmation sur 3 vols, score et intervalle de confiance du test, données et commit du code (traçabilité).
-- **Test de fumée** : le champion rechargé depuis le registre redonne exactement F1 = 0,852 sur le test.
-- **Règle de promotion** : un challenger ne devient champion que s'il bat le champion de façon prouvée (bootstrap par moteur). Promotion et retour
+> **How to read this figure** (screenshot, no axes)
+> - Screenshot of the MLflow user interface for the registered model `aeroguard-alerte`.
+> - Each row is one model **version**; the **Aliases** column shows which version is `@champion` (used in production) and which is `@challenger`.
 
-## 🛡️ v5 — Autoencodeur et système hybride : détecter les pannes jamais vues
+- Each version carries its **model card**: threshold, 3-flight confirmation, test score and confidence interval, data and code commit (traceability).
+- **Smoke test**: the champion reloaded from the registry gives exactly F1 = 0.852 on the test set again.
+- **Promotion rule**: a challenger only becomes champion if it beats the champion in a proven way (bootstrap by engine). Promotion and rollback only move an alias: the code never changes.
 
-Un modèle supervisé ne reconnaît que les pannes qu'il a apprises : sans aucun moteur fan à l'entraînement, XGBoost ne prévient que **2 moteurs fan de test sur 4**. La v5 ajoute un **autoencodeur** entraîné uniquement sur des vols **sains** : tout ce qu'il reconstruit mal est suspect, quelle que soit la panne.
+## 🛡️ v5 — Autoencoder and hybrid system: detecting never-seen failures
 
-- **Ligne de base par moteur** : chaque vol est comparé aux 10 premiers vols de **son** moteur, ce qui efface la signature de la flotte (sans elle, l'autoencodeur sonnait en permanence sur une flotte jamais vue).
-- **Système hybride** : alerte si XGBoost **ou** l'autoencodeur alerte ; états affichés « normal », « anomalie inconnue », « usure connue », « usure confirmée ».
-- **Diagnostic par capteur** : les capteurs les plus mal reconstruits orientent l'inspection (fan → P21, P15 ; turbine HP → T48 ; turbine BP → T50).
+A supervised model only recognizes the failures it has learned: without any fan engine in training, XGBoost warns only **2 fan test engines out of 4**. Version 5 adds an **autoencoder** trained only on **healthy** flights: anything it reconstructs badly is suspicious, whatever the failure.
 
-**Évaluation finale sur les 39 moteurs de test** (réglages figés sur la validation, après les 10 vols de ligne de base) :
+- **Per-engine baseline**: each flight is compared with the first 10 flights of **its own** engine, which removes the fleet signature (without it, the autoencoder was constantly alarming on a never-seen fleet).
+- **Hybrid system**: alert if XGBoost **or** the autoencoder alerts; displayed states are "normal", "unknown anomaly", "known wear", "confirmed wear".
+- **Per-sensor diagnosis**: the worst-reconstructed sensors guide the inspection (fan → P21, P15; HP turbine → T48; LP turbine → T50).
 
-| Système                      | Pannes connues : moteurs prévenus | Avance moyenne | Fausses alarmes | Famille jamais vue : moteurs prévenus  |
-| ---------------------------- | --------------------------------- | -------------- | --------------- | -------------------------------------- |
-| XGBoost v3 seul              | 39 / 39                           | 40,1 vols      | 26              | 37 / 39 (fan : **2 / 4**)              |
-| Autoencodeur + ligne de base | 39 / 39                           | 32,5 vols      | 7               | 39 / 39 (fan : 4 / 4, 0 fausse alarme) |
-| **Hybride (v5)**             | **39 / 39**                       | **40,8 vols**  | 29              | **39 / 39 (fan : 4 / 4)**              |
+**Final evaluation on the 39 test engines** (settings frozen on validation, after the 10 baseline flights):
 
-![Panne jamais vue : XGBoost seul contre système hybride](results/figures/56_test_panne_inconnue.png)
+| System                        | Known failures: engines warned | Mean lead time   | False alarms | Never-seen family: engines warned      |
+| ----------------------------- | ------------------------------ | ---------------- | ------------ | -------------------------------------- |
+| XGBoost v3 alone              | 39 / 39                        | 40.1 flights     | 26           | 37 / 39 (fan: **2 / 4**)               |
+| Autoencoder + baseline        | 39 / 39                        | 32.5 flights     | 7            | 39 / 39 (fan: 4 / 4, 0 false alarms)   |
+| **Hybrid (v5)**               | **39 / 39**                    | **40.8 flights** | 29           | **39 / 39 (fan: 4 / 4)**               |
 
-- Sur les pannes connues, l'hybride fait jeu égal avec XGBoost ; sur une panne jamais vue, il prévient **tous** les moteurs.
-- Registre MLflow : `aeroguard-alerte@champion` (XGBoost) et `aeroguard-anomalie@champion` (autoencodeur centré) travaillent ensemble.
-- **Limite** : sur certaines flottes inconnues (HPT+LPT), les deux gardiens produisent des fausses alarmes ; quelques vols de référence de la nouvelle flotte permettraient de les réduire.
-- Essais écartés (documentés) : autoencodeur convolutif sur signaux bruts (7,5 vols d'avance) et « jumeau numérique » (20,2 vols) : les features physiques restent meilleures sur ces données.
+![Never-seen failure: XGBoost alone versus hybrid system](results/figures/56_test_panne_inconnue.png)
 
-## 🧪 v6 — GAN et cas rares : générer des données synthétiques, et savoir quand ne pas le faire
+> **How to read this figure** (two panels, same X-axis)
+> - **X-axis (both panels):** the failure family removed from training, so it is "never seen" by the models.
+> - **Left panel, Y-axis:** percentage of test engines of that family that were warned (*"% des moteurs"* = "% of engines"). **Higher is better.** Title: *"Moteurs de test prévenus — famille jamais vue"* = "Test engines warned — never-seen family".
+> - **Right panel, Y-axis:** number of confirmed false alarms (*"fausses alarmes confirmées"*). **Lower is better.** Title: *"Fausses alarmes — famille jamais vue"* = "False alarms — never-seen family".
+> - **Bars:** blue = XGBoost alone (*"XGBoost seul"*), orange = hybrid system v5 (*"système hybride (v5)"*). *mixte* = mixed (multi-component) failures.
 
-**Question :** quand une famille de pannes est rare, des vols **synthétiques** (GAN, SMOTE) peuvent-ils aider XGBoost ?
+- On known failures, the hybrid matches XGBoost; on a never-seen failure, it warns **every** engine.
+- MLflow registry: `aeroguard-alerte@champion` (XGBoost) and `aeroguard-anomalie@champion` (centered autoencoder) work together.
+- **Limitation**: on some unknown fleets (HPT+LPT), both guards produce false alarms; a few reference flights from the new fleet would reduce them.
+- Rejected attempts (documented): convolutional autoencoder on raw signals (7.5 flights of lead time) and "digital twin" (20.2 flights): physical features remain better on this data.
 
-**Démarche (6 leçons) :**
+## 🧪 v6 — GANs and rare cases: generating synthetic data, and knowing when not to
 
-1. **Mesurer avant de construire** : les vols usés ne sont pas rares (70,5 % du train) ; la vraie rareté est au niveau des familles (fan, HPC, LPC+HPC : 5 moteurs chacune).
-2. **GAN tabulaire** (Keras, boucle `tf.GradientTape`) entraîné sur les 340 vols usés « fan » : entraînement stable, proche de l'équilibre.
-3. **Mode collapse** provoqué et détecté (bruit à 1 dimension : espacement des faux vols divisé par 200), remèdes testés (lissage des étiquettes, expert ralenti).
-4. **Évaluation complète des faux vols** sur 4 piliers : fidélité (KS, IQR), réalisme (classifieur), mémorisation (DCR), utilité (TSTR).
-5. **GAN contre SMOTE** en validation croisée par moteur (GAN réentraîné dans chaque pli pour éviter toute fuite).
-6. **Test final** ouvert une seule fois, décision avec la règle de promotion du registre MLflow.
+**Question:** when a failure family is rare, can **synthetic** flights (GAN, SMOTE) help XGBoost?
 
-**Ce que révèle l'évaluation des faux vols (6.4) :**
+**Approach (6 lessons):**
 
-| Candidat                | KS médian ↓ | Un classifieur les distingue ? (AUC, 0,5 = non) | Recopie le train ?       | Utilité (PR-AUC TSTR) |
-| ----------------------- | ----------- | ----------------------------------------------- | ------------------------ | --------------------- |
-| Vrais vols (référence)  | —           | —                                               | —                        | **0,985**             |
-| GAN                     | **0,147**   | **1,000** (oui, toujours)                       | non (0 %)                | 0,931                 |
-| Gaussienne              | 0,191       | 0,423                                           | non                      | 0,966                 |
-| Copies bruitées (piège) | 0,053       | 0,408                                           | **oui (100 % repérées)** | 0,980                 |
+1. **Measure before building**: worn flights are not rare (70.5% of train); the real rarity is at the family level (fan, HPC, LPC+HPC: 5 engines each).
+2. **Tabular GAN** (Keras, `tf.GradientTape` loop) trained on the 340 worn "fan" flights: stable training, close to equilibrium.
+3. **Mode collapse** triggered and detected (1-dimensional noise: spacing between fake flights divided by 200), remedies tested (label smoothing, slowed-down expert).
+4. **Full evaluation of the fake flights** on 4 pillars: fidelity (KS, IQR), realism (classifier), memorization (DCR), utility (TSTR).
+5. **GAN versus SMOTE** with cross-validation by engine (GAN retrained in each fold to avoid any leakage).
+6. **Final test** opened only once, decision made with the MLflow registry promotion rule.
 
-Le GAN reproduit bien chaque feature, mais il **viole la physique** (écarts-types négatifs), et un simple classifieur repère 100 % de ses faux vols.
+**What the evaluation of the fake flights reveals (6.4):**
 
-![Évaluation des faux vols](results/figures/64_evaluation_faux_vols.png)
+| Candidate                | Median KS ↓ | Can a classifier tell them apart? (AUC, 0.5 = no) | Copies the train set?    | Utility (TSTR PR-AUC) |
+| ------------------------ | ----------- | ------------------------------------------------- | ------------------------ | --------------------- |
+| Real flights (reference) | —           | —                                                 | —                        | **0.985**             |
+| GAN                      | **0.147**   | **1.000** (yes, always)                           | no (0%)                  | 0.931                 |
+| Gaussian                 | 0.191       | 0.423                                             | no                       | 0.966                 |
+| Noisy copies (trap)      | 0.053       | 0.408                                             | **yes (100% detected)**  | 0.980                 |
 
-**GAN contre SMOTE (6.5, validation croisée, 6 plis) :** sans ajout, XGBoost a déjà une PR-AUC fan de 0,978 et **100 %** des vols fan critiques détectés (effet plafond). GAN brut −0,0002, GAN rogné +0,0005, gaussienne −0,0011, SMOTE +0,0017 : aucun gain utile en pratique.
+The GAN reproduces each feature well, but it **breaks physics** (negative standard deviations), and a simple classifier spots 100% of its fake flights.
 
-![GAN contre SMOTE](results/figures/65_gan_contre_smote.png)
+![Evaluation of the fake flights](results/figures/64_evaluation_faux_vols.png)
 
-**Test final (39 moteurs, ouvert une seule fois) :**
+> **How to read this figure** (three panels)
+> - **X-axis (all panels):** the candidates. *vrais_val_reference* = real validation flights (reference), *A_gan_6.2* = GAN from lesson 6.2, *D_gan_lissage_6.3* = GAN with label smoothing from lesson 6.3, *base_gaussienne* = Gaussian baseline, *base_copies_bruitees* = noisy-copies baseline (the trap).
+> - **Left panel, Y-axis:** KS distance per feature. Each box shows the spread of the KS values over all the features. **Lower = more faithful.** The red dotted line is the KS threshold of 0.2 (*"seuil KS = 0,2"*). Title: *"KS par feature (plus bas = plus fidèle)"* = "KS per feature (lower = more faithful)".
+> - **Middle panel, Y-axis:** AUC of a classifier trying to separate real from fake flights. The gray dashed line at **0.5 = indistinguishable** (*"indiscernable"*); **1.0 = always detected as fake**. Title: *"Un classifieur distingue-t-il vrais et faux ?"* = "Can a classifier tell real from fake?".
+> - **Right panel, Y-axis:** utility = balanced accuracy of a model trained on fake flights and tested on real ones (TSTR, *"exactitude équilibrée"*). The black dashed line is the same model trained on real flights (TRTR). Title: *"Utilité : TSTR (exactitude équilibrée)"* = "Utility: TSTR (balanced accuracy)".
 
-| Modèle                 | F1 macro | PR-AUC fan | Moteurs détectés | Fausses alarmes |
-| ---------------------- | -------- | ---------- | ---------------- | --------------- |
-| **XGBoost (champion)** | 0,851    | 0,975      | 39/39            | 37              |
-| XGBoost + SMOTE        | 0,854    | 0,975      | 39/39            | 32              |
+**GAN versus SMOTE (6.5, cross-validation, 6 folds):** with no augmentation, XGBoost already has a fan PR-AUC of 0.978 and detects **100%** of critical fan flights (ceiling effect). Raw GAN −0.0002, clipped GAN +0.0005, Gaussian −0.0011, SMOTE +0.0017: no useful gain in practice.
 
-Écart de F1 non prouvé (IC 95 % [−0,002 ; +0,015]), gain fan de +0,0005 sous le minimum exigé (+0,01) : **le champion reste en place** (`aeroguard-alerte@champion`).
+![GAN versus SMOTE](results/figures/65_gan_contre_smote.png)
 
-![Test final v6](results/figures/66_test_final_v6.png)
+> **How to read this figure** (two panels)
+> - **X-axis (both panels):** the augmentation methods. *sans_ajout* = no augmentation (reference), *smote* = SMOTE, *gaussienne* = Gaussian, *gan_brut* = raw GAN, *gan_rogne* = clipped GAN.
+> - **Left panel, Y-axis:** PR-AUC on the evaluated fan engine (*"PR-AUC sur le moteur fan évalué"*). Each colored line is one fold (*"pli"*), and each fold holds out one fan engine never seen in training. Title: *"Chaque pli = un moteur fan jamais vu à l'entraînement"* = "Each fold = one fan engine never seen in training".
+> - **Right panel, Y-axis:** mean gain in fan PR-AUC compared with no augmentation (*"gain moyen de PR-AUC fan vs sans ajout"*). The label above each bar gives the number of folds won out of 6 (*"plis"* = folds). **Green = useful according to the rule, red = not useful.** Title: *"Gain de chaque méthode (vert = utile selon la règle)"*.
 
-**Quel modèle pour quelle situation ?**
+**Final test (39 engines, opened only once):**
 
-- **Panne connue et bien représentée** → XGBoost (supervisé) : le plus précis et le plus simple.
-- **Panne jamais vue** → autoencodeur entraîné sur le normal, avec ligne de base par moteur.
-- **En production** → le système hybride v5 (XGBoost OU autoencodeur).
-- **Panne connue mais très rare, et modèle supervisé en échec** → d'abord SMOTE, puis un GAN seulement avec une évaluation complète (fidélité, réalisme, mémorisation, utilité).
-- **Toujours** → une règle de décision fixée avant de regarder, une taille d'effet minimale, et un test ouvert une seule fois.
+| Model                  | Macro F1 | Fan PR-AUC | Engines detected | False alarms |
+| ---------------------- | -------- | ---------- | ---------------- | ------------ |
+| **XGBoost (champion)** | 0.851    | 0.975      | 39/39            | 37           |
+| XGBoost + SMOTE        | 0.854    | 0.975      | 39/39            | 32           |
 
-**Limites :** une seule famille rare étudiée (fan) ; GAN tabulaire simple (pas de WGAN-GP ni de GAN conditionnel) ; les familles « rares » ont encore 5 à 6 moteurs, ce qui ne permet pas de conclure pour une famille à 1 ou 2 moteurs.
+F1 gap not proven (95% CI [−0.002; +0.015]), fan gain of +0.0005 below the required minimum (+0.01): **the champion stays in place** (`aeroguard-alerte@champion`).
 
-## 🔍 Explicabilité : pourquoi le modèle déclenche une alerte (SHAP)
+![Final test v6](results/figures/66_test_final_v6.png)
 
-Chaque décision de XGBoost est décomposée capteur par capteur avec SHAP, calculé directement sur GPU (×11,7 plus rapide que sur CPU).
+> **How to read this figure** (two panels)
+> - **Left panel:** the **X-axis** shows three metrics (macro F1, overall PR-AUC, fan PR-AUC); the **Y-axis** is the score. The axis starts at **0.7, not 0**, to make small gaps visible. Bars: blue = *sans_ajout* (champion, no augmentation), orange = *smote*. Title: *"Test final (39 moteurs) : sans ajout contre SMOTE"* = "Final test (39 engines): no augmentation versus SMOTE".
+> - **Right panel:** the **X-axis** is the macro F1 gap (SMOTE − no augmentation) over 1,000 randomly drawn fleets (*"écart de F1 macro … 1 000 flottes tirées"*); the **Y-axis** is the number of draws. The black line is 0 and the red dashed lines bound the 95% CI (*"IC 95 %"*). **If 0 lies between the red lines, the gap is not proven.** Title: *"L'écart est-il prouvé ? (0 dans l'intervalle = non)"* = "Is the gap proven? (0 inside the interval = no)".
 
-**Ce qui déclenche une alerte** — les températures autour des turbines (T50, T48) pendant la montée dominent, exactement la signature physique d'une turbine usée :
+**Which model for which situation?**
 
-![Importance SHAP par capteur](results/figures/35_shap_par_capteur.png)
+- **Known, well-represented failure** → XGBoost (supervised): the most accurate and the simplest.
+- **Never-seen failure** → autoencoder trained on normal data, with a per-engine baseline.
+- **In production** → the v5 hybrid system (XGBoost OR autoencoder).
+- **Known but very rare failure, and the supervised model fails** → SMOTE first, then a GAN only with a full evaluation (fidelity, realism, memorization, utility).
+- **Always** → a decision rule fixed before looking, a minimum effect size, and a test opened only once.
 
-**Le sens de l'effet** — chaque point est un vol ; une température T48/T50 élevée (en rouge) pousse vers « usé » :
+**Limitations:** only one rare family studied (fan); simple tabular GAN (no WGAN-GP or conditional GAN); the "rare" families still have 5 to 6 engines, which does not allow conclusions for a family with 1 or 2 engines.
 
-![Nuage SHAP](results/figures/35_shap_nuage.png)
+## 🔍 Explainability: why the model raises an alert (SHAP)
 
-**Exemple d'alerte expliquée** — moteur DS01_1, vol 37, 63 vols avant la panne (probabilité 91 %) :
-alerte car T50 en montée (+0,77), T50 en croisière (+0,47) et T48 en montée (+0,35).
+Each XGBoost decision is broken down sensor by sensor with SHAP, computed directly on GPU (×11.7 faster than on CPU).
 
-**Diagnostic du composant** — part de chaque capteur dans la décision, pour chaque famille de panne :
+**What triggers an alert** — the temperatures around the turbines (T50, T48) during climb dominate, exactly the physical signature of a worn turbine:
 
-![Capteurs utilisés par famille](results/figures/35_shap_diagnostic_familles.png)
+![SHAP importance per sensor](results/figures/35_shap_par_capteur.png)
 
-> **Limite identifiée grâce à SHAP :** chaque famille de panne provient d'un seul fichier NASA, et une partie du diagnostic passe par P2 (pression d'entrée), un capteur qui révèle le fichier plutôt que la panne. Le diagnostic reste surtout physique (P24, T30, Nc, T50), mais ses scores sont probablement optimistes pour une flotte nouvelle. Détails dans [`docs/baselines.md`](docs/baselines.md).
+> **How to read this figure** (horizontal bars)
+> - **Y-axis:** the 14 sensors, the most important at the top.
+> - **X-axis:** mean absolute SHAP value, summed over the 9 features of each sensor (*"moyenne |SHAP| (somme des 9 features du capteur)"*). **A longer bar means more influence on the alert.**
+> - **Title:** *"Alerte sain/usé : importance SHAP par capteur"* = "Healthy/worn alert: SHAP importance per sensor".
 
-## Structure du projet
+**Direction of the effect** — each dot is one flight; a high T48/T50 temperature (in red) pushes toward "worn":
+
+![SHAP summary plot](results/figures/35_shap_nuage.png)
+
+> **How to read this figure** (SHAP summary plot)
+> - **Y-axis:** the 12 most important features (sensor + statistic + flight phase, e.g. `T50_mean_montee` = mean T50 during climb).
+> - **X-axis:** SHAP value = impact on the model output. **Right of 0 pushes toward "worn", left of 0 pushes toward "healthy".**
+> - **Dots and color:** each dot is one flight; **red = high value of the feature, blue = low value.**
+> - **Title:** *"Chaque point = un vol ; rouge = valeur haute de la feature"* = "Each dot = one flight; red = high feature value".
+
+**Example of an explained alert** — engine DS01_1, flight 37, 63 flights before failure (probability 91%):
+alert because of T50 during climb (+0.77), T50 during cruise (+0.47) and T48 during climb (+0.35).
+
+**Component diagnosis** — share of each sensor in the decision, for each failure family:
+
+![Sensors used per family](results/figures/35_shap_diagnostic_familles.png)
+
+> **How to read this figure** (heatmap)
+> - **X-axis (columns):** the 14 sensors.
+> - **Y-axis (rows):** the failure families the diagnosis model can predict.
+> - **Cell value and color:** the share (%) of each sensor in the XGBoost decision for that family. **Each row adds up to 100%; darker blue = larger share.**
+> - **Title:** *"Diagnostic XGBoost : part de chaque capteur dans la décision, par famille"* = "XGBoost diagnosis: share of each sensor in the decision, per family".
+
+> **Limitation found thanks to SHAP:** each failure family comes from a single NASA file, and part of the diagnosis relies on P2 (inlet pressure), a sensor that reveals the file rather than the failure. The diagnosis remains mostly physical (P24, T30, Nc, T50), but its scores are probably optimistic for a new fleet. Details in [`docs/baselines.md`](docs/baselines.md).
+
+## Project structure
 
 ```
-data/            données brutes et traitées (non versionnées)
-notebooks/       exploration et analyses (un notebook par étape)
-src/aeroguard/   code réutilisable (package Python)
-tests/           tests automatiques (pytest)
-results/         graphiques et résultats
-docs/            documentation, baselines et journal de bord
+data/            raw and processed data (not versioned)
+notebooks/       exploration and analyses (one notebook per step)
+src/aeroguard/   reusable code (Python package)
+tests/           automated tests (pytest)
+results/         charts and results
+docs/            documentation, baselines and logbook
 ```
 
-| Module             | Rôle                                                           |
-| ------------------ | -------------------------------------------------------------- |
-| `simulation.py`    | Flotte simulée (v0)                                            |
-| `detection.py`     | Baseline par score z et confirmation des alarmes               |
-| `data.py`          | Lecture des fichiers HDF5 N-CMAPSS, étiquettes                 |
-| `normalisation.py` | Modèle du moteur sain et résidus                               |
-| `features.py`      | Phases de vol et 126 features par vol                          |
-| `decoupage.py`     | Découpage train / val / test par moteur, sans fuite            |
-| `pipeline.py`      | Pipeline complet d'un fichier                                  |
-| `outils.py`        | Chronométrage                                                  |
-| `donnees_ml.py`    | Préparation de X / y (alerte et diagnostic), poids des classes |
-| `evaluation.py`    | Seuil de décision, métriques, leaderboard                      |
-| `explication.py`   | Noms de features lisibles, importances, explications SHAP      |
-| `modeles.py`       | XGBoost (GPU), seuil optimal, espace de recherche Optuna       |
-| `anomalies.py`     | Détection non supervisée (score, seuil par percentile)         |
-| `metier.py`        | Avance d'alerte, fausses alarmes, diagnostic par moteur        |
+| Module             | Role                                                          |
+| ------------------ | ------------------------------------------------------------- |
+| `simulation.py`    | Simulated fleet (v0)                                          |
+| `detection.py`     | z-score baseline and alarm confirmation                       |
+| `data.py`          | Reading N-CMAPSS HDF5 files, labels                           |
+| `normalisation.py` | Healthy-engine model and residuals                            |
+| `features.py`      | Flight phases and 126 features per flight                     |
+| `decoupage.py`     | Train / val / test split by engine, with no leakage           |
+| `pipeline.py`      | Full pipeline for one file                                    |
+| `outils.py`        | Timing                                                        |
+| `donnees_ml.py`    | Preparing X / y (alert and diagnosis), class weights          |
+| `evaluation.py`    | Decision threshold, metrics, leaderboard                      |
+| `explication.py`   | Readable feature names, importances, SHAP explanations        |
+| `modeles.py`       | XGBoost (GPU), optimal threshold, Optuna search space         |
+| `anomalies.py`     | Unsupervised detection (score, percentile threshold)          |
+| `metier.py`        | Alert lead time, false alarms, per-engine diagnosis           |
 
 ## Installation (Windows)
 
@@ -277,34 +345,34 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## Utilisation
+## Usage
 
 ```bash
-python -m aeroguard.simulation    # générer une flotte simulée
-pytest -v                         # lancer les tests
+python -m aeroguard.simulation    # generate a simulated fleet
+pytest -v                         # run the tests
 ```
 
-## Avec Docker
+## With Docker
 
 ```bash
 docker build -t aeroguard:v0 .
-docker run --rm aeroguard:v0              # simulateur
+docker run --rm aeroguard:v0              # simulator
 docker run --rm aeroguard:v0 pytest -v    # tests
 ```
 
 ## Technologies
 
-Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot TensorFlow / Keras · MLflow
+Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optuna · SHAP · NVIDIA RAPIDS (cuDF) · h5py · pytest · Ruff · pre-commit · Docker · GitHub Actions · Codecov · Dependabot · TensorFlow / Keras · MLflow
 
-Prochainement : FastAPI · NVIDIA Triton
+Coming soon: FastAPI · NVIDIA Triton
 
-## Feuille de route
+## Roadmap
 
-- [x] **v0 — Fondations** : environnement, détection par score z, simulateur, tests, Docker, CI
-- [x] **v1 — Données NASA N-CMAPSS** : 9 fichiers, 99 moteurs, 7 473 vols, 126 features, découpage sans fuite
-- [x] **v2 — Baselines et métriques** : 6 modèles, F1 macro, métriques métier par moteur
-- [x] **v3 — XGBoost sur GPU** : alerte (39/39 moteurs, 40 vols d'avance), diagnostic du composant (37/39), Optuna, SHAP, test de panne inconnue-
-- [x] **v4 — Deep learning** : réseau dense et CNN 1D (TensorFlow), suivi MLflow, comparaison finale par bootstrap : XGBoost reste en tête
-- [x] **v5 — Autoencodeur et système hybride** : détection des pannes jamais vues (fan : 4/4 moteurs de test contre 2/4 pour XGBoost seul), ligne de base par moteur, diagnostic par capteur
-- [x] **v6 — GAN et cas rares** : GAN tabulaire, détection du mode collapse, évaluation des données synthétiques (fidélité, réalisme, mémorisation, TSTR), GAN contre SMOTE ; aucun gain utile, le champion XGBoost reste en place
-- [ ] v7 — Application complète (Triton, API, dashboard)
+- [x] **v0 — Foundations**: environment, z-score detection, simulator, tests, Docker, CI
+- [x] **v1 — NASA N-CMAPSS data**: 9 files, 99 engines, 7,473 flights, 126 features, leak-free split
+- [x] **v2 — Baselines and metrics**: 6 models, macro F1, per-engine business metrics
+- [x] **v3 — XGBoost on GPU**: alert (39/39 engines, 40 flights of lead time), component diagnosis (37/39), Optuna, SHAP, unknown-failure test
+- [x] **v4 — Deep learning**: dense network and 1D CNN (TensorFlow), MLflow tracking, final bootstrap comparison: XGBoost stays on top
+- [x] **v5 — Autoencoder and hybrid system**: detection of never-seen failures (fan: 4/4 test engines versus 2/4 for XGBoost alone), per-engine baseline, per-sensor diagnosis
+- [x] **v6 — GANs and rare cases**: tabular GAN, mode-collapse detection, evaluation of synthetic data (fidelity, realism, memorization, TSTR), GAN versus SMOTE; no useful gain, the XGBoost champion stays in place
+- [ ] v7 — Full application (Triton, API, dashboard)
