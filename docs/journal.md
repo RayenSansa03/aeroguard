@@ -299,3 +299,9 @@
 - **Fait :** mode `onnx` (ONNX Runtime pour l'autoencodeur, `Booster.inplace_predict` pour XGBoost), choisi par `AEROGUARD_INFERENCE` ; 4 tests avec de vrais petits modèles ; parité 76/76 (1e-16) ; débit stable à 16 clients (39 req/s contre 19).
 - **Appris :** ONNX = format portable, même calcul sans TensorFlow ; `inplace_predict` utilise tous les arbres par défaut, il faut `iteration_range` jusqu'à `best_iteration` ; un thread par appel évite la sur-souscription ; les tests unitaires vérifient la mécanique, la parité vérifie la vérité.
 - **Bloquant :** ~28 ms par vol sous Windows même sans modèle lourd ; hypothèse d'un surcoût de la pile serveur Windows, à vérifier dans Docker.
+
+---
+
+- **Fait :** API hébergée sur Render  ; parité 76/76 sur l'URL publique ; job `deploy` dans `cd.yml` (deploy hook avec la version exacte de l'image, smoke test public sur la version, release seulement après déploiement) ; secret dans l'environnement GitHub `production` limité aux tags `v*` ; `v7.0.0-rc.3` déployée automatiquement.
+- **Appris :** vérifier les conditions d'un hébergeur au lieu de les supposer ; mesurer la mémoire avant de choisir un plan ; une URL ne se devine pas (`aeroguard-api` était déjà pris) ; un smoke test vérifie la version exacte, pas seulement « quelque chose répond » ; un deploy hook est un secret ; environnements GitHub = coffre-fort par cible.
+- **Bloquant :** l'historique des moteurs est perdu à chaque mise en veille de Render (état en mémoire) → solution prévue en 7.6-E2 (Redis), optionnelle.
