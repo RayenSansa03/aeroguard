@@ -1,4 +1,4 @@
-"""API AeroGuard : santé du service, mesure des requêtes et routes de la flotte."""
+"""API AeroGuard : santé du service, mesure des requêtes, flotte et monitoring."""
 
 import logging
 import os
@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from aeroguard.journalisation import configurer_logs
 from aeroguard.routes_flotte import obtenir_service
 from aeroguard.routes_flotte import routeur as routeur_flotte
+from aeroguard.routes_monitoring import routeur as routeur_monitoring
 
 configurer_logs(os.getenv("AEROGUARD_LOG_LEVEL", "INFO"))
 journal_http = logging.getLogger("aeroguard.http")
@@ -47,6 +48,7 @@ app = FastAPI(
 )
 
 app.include_router(routeur_flotte)
+app.include_router(routeur_monitoring)
 
 
 @app.middleware("http")

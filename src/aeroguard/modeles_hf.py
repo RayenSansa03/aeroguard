@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aeroguard.derive import FICHIER_REFERENCE
 from aeroguard.service import FICHIER_ONNX, FICHIERS_MODELES
 
 FICHIERS_DEPLOIEMENT = [
@@ -16,6 +17,7 @@ FICHIERS_DEPLOIEMENT = [
     FICHIER_ONNX,
     FICHIERS_MODELES["stats"],
     FICHIERS_MODELES["config"],
+    FICHIER_REFERENCE,
 ]
 
 
