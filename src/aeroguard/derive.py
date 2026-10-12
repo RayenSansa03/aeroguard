@@ -12,6 +12,7 @@ import numpy as np
 SEUIL_MODEREE = 0.10
 SEUIL_FORTE = 0.25
 MINIMUM_VOLS = 50
+FICHIER_REFERENCE = "reference_derive.json"
 
 
 def _proportions(valeurs: np.ndarray, bords: np.ndarray) -> np.ndarray:

@@ -147,6 +147,20 @@ class ServiceDecision:
         ]
         return sorted(lignes, key=lambda ligne: (ordre.get(ligne["niveau"], 3), ligne["moteur"]))
 
+    def vols_recents(self, limite: int = 5000) -> np.ndarray:
+        """Vols reçus (imputés), tous moteurs confondus, pour le suivi de dérive.
+
+        Les historiques sont concaténés moteur par moteur ; on garde les `limite` derniers.
+        """
+        vols = []
+        for moteur in self.depot.dernieres():
+            historique = self.depot.lire(moteur)
+            if historique is not None:
+                vols.extend(historique.vols)
+        if not vols:
+            return np.empty((0, len(self.colonnes)))
+        return np.vstack(vols[-limite:])
+
     def reinitialiser(self, moteur: str) -> bool:
         """Oublie un moteur (par exemple après une révision). False s'il était inconnu."""
         with self.depot.verrou(moteur):
@@ -299,7 +313,8 @@ def _charger_modeles(dossier: Path) -> ServiceDecision:  # pragma: no cover
         return xgb.predict_proba(pd.DataFrame(x, columns=colonnes))[0, 1]
 
     def erreurs_ae(x_centre):
-
+        # Appel direct du modèle : predict() reconstruit un pipeline tf.data à chaque
+        # appel, un surcoût qui domine pour un seul vol.
         xn = standardiser(x_centre, stats["moyennes"], stats["ecarts"])
         reconstruction = autoencodeur(xn, training=False).numpy()
         return ((xn - reconstruction) ** 2)[0]
