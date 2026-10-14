@@ -16,7 +16,7 @@ jobs:
     env:
       API_URL: https://aeroguard-api-75tq.onrender.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
