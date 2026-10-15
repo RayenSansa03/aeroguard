@@ -445,6 +445,7 @@ Models are not stored in the image or in Git: the API downloads them at startup 
 - **PSI looks at each feature alone**, on fixed deciles. A change in scale that keeps values inside the same deciles, or a change in the relationship between two sensors, can stay under the thresholds.
 - **No issue deduplication.** The weekly workflow opens a new issue each time major drift is found.
 - **Triton is local only.** The free hosting is CPU-only with 512 MB of RAM, so the public API runs in `onnx` mode.
+- **Models load on the first fleet request.** After the free Render instance wakes up, `/health` reports `modeles_charges: false` until a `/flotte` call triggers the download from Hugging Face; that first call is slower.
 
 ## Project structure
 
