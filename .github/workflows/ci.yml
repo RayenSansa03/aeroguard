@@ -81,7 +81,7 @@ jobs:
           exit 1
 
       - name: Scan Trivy (vulnérabilités HIGH et CRITICAL qui ont un correctif)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:ci
           version: v0.69.3
