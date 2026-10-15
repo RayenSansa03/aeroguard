@@ -323,3 +323,9 @@
 - **Fait :** Toutes les PR Dependabot traitées une par une : checkout v7, setup-python v7, setup-buildx v4, codecov-action v7, trivy-action v0.36.0 (binaire Trivy toujours épinglé en v0.69.3), minimums de pytest-cov, ruff, matplotlib, h5py et pandas 3 ; Python 3.14 ignoré. Envoi Codecov vérifié dans le log de main, workflow de dérive lancé à la main, déploiement complet validé avec le tag v7.0.0-rc.5.
 - **Appris :** La CI d'une PR ne teste que ce qui tourne sur une PR : cd.yml se teste avec un tag, drift-report.yml avec un lancement manuel. Les PR Dependabot n'ont pas accès aux secrets, donc Codecov se vérifie après le merge. On merge les PR qui touchent le même fichier une par une, avec un rebase juste avant.
 - **Bloquant :** Aucun.
+
+---
+
+- **Fait :** Mise en valeur du dépôt (description, topics, en-tête du README avec résultats clés, lien vers l'API et schéma d'architecture). Répétition de l'évaluation NVIDIA. Version finale v7.0.0 publiée.
+- **Appris :** Un projet se juge en 30 secondes : phrase d'accroche, preuve que ça marche (lien en ligne, chiffres), technologies. Une release finale suit les mêmes étapes qu'une release candidate, mais publie aussi le tag `latest`.
+- **Bloquant :** Aucun.

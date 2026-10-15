@@ -499,4 +499,4 @@ Python · NumPy · pandas · Matplotlib · scikit-learn · XGBoost (GPU) · Optu
 - [x] **v4 — Deep learning**: dense network and 1D CNN (TensorFlow), MLflow tracking, final bootstrap comparison: XGBoost stays on top
 - [x] **v5 — Autoencoder and hybrid system**: detection of never-seen failures (fan: 4/4 test engines versus 2/4 for XGBoost alone), per-engine baseline, per-sensor diagnosis
 - [x] **v6 — GANs and rare cases**: tabular GAN, mode-collapse detection, evaluation of synthetic data (fidelity, realism, memorization, TSTR), GAN versus SMOTE; no useful gain, the XGBoost champion stays in place
-- [ ] v7 — Full application (Triton, API, dashboard)
+- [x] **v7 — Full application**: decision engine (39/39 engines warned, 0 in-service failures in the fleet replay), FastAPI with ONNX or Triton inference, Streamlit dashboard, CI/CD to GHCR and Render, JSON logs and PSI drift monitoring
