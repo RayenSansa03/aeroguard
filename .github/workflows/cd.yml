@@ -104,7 +104,7 @@ jobs:
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
           IMAGE="ghcr.io/$OWNER/aeroguard-api:$VERSION"
           ENCODED=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMAGE")
-          curl -fsS -X POST "$DEPLOY_HOOK&imgURL=$ENCODED" > /dev/null
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 10 -X POST "$DEPLOY_HOOK&imgURL=$ENCODED" > /dev/null
           echo "Deploy requested for $IMAGE"
 
       - name: Smoke test on the public URL
@@ -112,7 +112,7 @@ jobs:
           VERSION="${TAG#v}"
           for _ in $(seq 1 60); do
             if curl -fsS "$API_URL/health" | grep -q "\"version\":\"$VERSION\""; then
-              curl -fsS "$API_URL/flotte/moteurs"
+              curl -fsS --retry 3 --retry-all-errors --retry-delay 10 "$API_URL/flotte/moteurs"
               echo
               echo "Render serves $VERSION and its models are reachable."
               exit 0
