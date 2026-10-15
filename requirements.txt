@@ -1,6 +1,6 @@
 # Calcul et données
 numpy>=2.1
-pandas>=2.2
+pandas>=3.0.6
 pyarrow>=18        # lire et écrire les fichiers Parquet
 
 # Graphiques
