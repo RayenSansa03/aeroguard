@@ -10,7 +10,17 @@
 
 **Detect aircraft engine wear early, recognize failures never seen in training, and tell the maintenance team what to do.**
 
-AeroGuard is an end-to-end anomaly detection system built on NASA N-CMAPSS turbofan data: a GPU-accelerated feature pipeline (NVIDIA RAPIDS), a hybrid of XGBoost and an autoencoder, a decision engine, a FastAPI service with ONNX or NVIDIA Triton inference, a Streamlit dashboard, CI/CD and drift monitoring.
+### What is AeroGuard?
+
+Aircraft engines wear out slowly, flight after flight, and an unexpected failure grounds the aircraft and costs far more than a planned repair. AeroGuard watches each engine after every flight through 14 sensors (temperatures, pressures, shaft speeds and fuel flow) and compares what it sees with how a healthy engine behaves. Trained and tested on NASA's N-CMAPSS dataset (99 simulated turbofan engines flying real flight profiles), it raises an alert about 40 flights before failure, still detects failures it never saw during training, and points the mechanic to the sensors and component to inspect first.
+
+![Monitored turbofan engine: sensor stations and components used by AeroGuard](docs/images/aeroguard_turbofan.png)
+
+_Sensor stations along the engine (P = pressure, T = temperature, N = shaft speed, Wf = fuel flow). Highlighted sensors (P21, P15, T48, T50) carry most of the wear signal; the five components below (Fan, LPC, HPC, HPT, LPT) are the ones that degrade in the dataset._
+
+### How it works
+
+AeroGuard is an end-to-end anomaly detection system: a GPU-accelerated feature pipeline (NVIDIA RAPIDS), a hybrid of XGBoost and an autoencoder, a decision engine, a FastAPI service with ONNX or NVIDIA Triton inference, a Streamlit dashboard, CI/CD and drift monitoring.
 
 **▶ Live API:** <https://aeroguard-api-75tq.onrender.com/docs> (free hosting: the first request may take about a minute while the service wakes up)
 
@@ -23,7 +33,7 @@ AeroGuard is an end-to-end anomaly detection system built on NASA N-CMAPSS turbo
 | Fleet replay through the API                   | **39 failures avoided**, **0** in-service failures                        |
 | GPU speed-up                                   | cuDF up to **×19.5**, XGBoost training **×4.3**                           |
 | API                                            | ONNX mode ≈ **5 ms** median latency, **76 / 76** parity with the notebook |
-| Quality                                        | **351** automated tests, CI/CD on every tag                               |
+| Quality                                        | **361** automated tests, CI/CD on every tag                               |
 
 ### Architecture
 
@@ -362,11 +372,11 @@ Version 7 turns the models into a service that a maintenance team can use: every
 
 The hybrid system (XGBoost OR autoencoder) is turned into three levels:
 
-| Level          | Meaning                                    | Example message                                                    |
-| -------------- | ------------------------------------------ | ------------------------------------------------------------------ |
-| `OK`           | nothing to report                          | —                                                                  |
-| `A_SURVEILLER` | watch this engine (early or isolated sign) | —                                                                  |
-| `URGENT`       | plan an inspection                         | "Wear confirmed by both models: priority intervention." (T48, T50) |
+| Level    | Meaning                                    | Example message                                                    |
+| -------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `OK`     | nothing to report                          | —                                                                  |
+| `WATCH`  | watch this engine (early or isolated sign) | —                                                                  |
+| `URGENT` | plan an inspection                         | "Wear confirmed by both models: priority intervention." (T48, T50) |
 
 Replay of the **39 test engines**, flight by flight (2,938 flights):
 
@@ -378,15 +388,17 @@ Replay of the **39 test engines**, flight by flight (2,938 flights):
 
 ### FastAPI service
 
-| Endpoint                                  | Role                                             |
-| ----------------------------------------- | ------------------------------------------------ |
-| `POST /flotte/vols`                       | send one flight, get the decision for its engine |
-| `GET /flotte/moteurs`                     | list the engines being followed                  |
-| `GET /flotte/moteurs/{moteur}`            | current state of one engine                      |
-| `GET /flotte/moteurs/{moteur}/historique` | decision history of one engine                   |
-| `DELETE /flotte/moteurs/{moteur}`         | forget an engine (after a workshop visit)        |
-| `GET /health`                             | version, inference mode, loaded models           |
-| `GET /monitoring/derive`                  | data-drift report (PSI) on recent flights        |
+| Endpoint                              | Role                                               |
+| ------------------------------------- | -------------------------------------------------- |
+| `POST /fleet/flights`                 | send one flight, get the decision for its engine   |
+| `GET /fleet/engines`                  | list the engines being followed, most urgent first |
+| `GET /fleet/engines/{engine}`         | latest decision for one engine                     |
+| `GET /fleet/engines/{engine}/history` | decision history of one engine                     |
+| `DELETE /fleet/engines/{engine}`      | reset an engine (after a workshop visit)           |
+| `GET /health`                         | version, inference mode, loaded models             |
+| `GET /monitoring/drift`               | data-drift report (PSI) on recent flights          |
+
+The public API is in English and documented in Swagger (`/docs`). The former French routes (`/flotte/...`, `/monitoring/derive`) still answer for backward compatibility but are hidden from the documentation.
 
 Three interchangeable inference modes, chosen with `AEROGUARD_INFERENCE`:
 
@@ -421,7 +433,7 @@ Three interchangeable inference modes, chosen with `AEROGUARD_INFERENCE`:
 
 Pushing a `v*` tag starts `cd.yml`:
 
-1. **CI**: the same pipeline as every pull request (Ruff, 351 tests, coverage).
+1. **CI**: the same pipeline as every pull request (Ruff, 361 tests, coverage).
 2. **Publish**: Docker image built and scanned with Trivy. A smoke test runs before the push, then the image goes to GitHub Container Registry with semantic-version tags (`latest` only for final releases).
 3. **Deploy**: Render deploy hook with the exact image, then a public smoke test checks that `/health` returns the expected version.
 4. **Release**: GitHub release created from the tag.
@@ -445,7 +457,7 @@ Models are not stored in the image or in Git: the API downloads them at startup 
 - **PSI looks at each feature alone**, on fixed deciles. A change in scale that keeps values inside the same deciles, or a change in the relationship between two sensors, can stay under the thresholds.
 - **No issue deduplication.** The weekly workflow opens a new issue each time major drift is found.
 - **Triton is local only.** The free hosting is CPU-only with 512 MB of RAM, so the public API runs in `onnx` mode.
-- **Models load on the first fleet request.** After the free Render instance wakes up, `/health` reports `modeles_charges: false` until a `/flotte` call triggers the download from Hugging Face; that first call is slower.
+- **Models load on the first fleet request.** After the free Render instance wakes up, `/health` reports `modeles_charges: false` until a `/fleet` call triggers the download from Hugging Face; that first call is slower.
 
 ## Project structure
 
@@ -478,8 +490,8 @@ docs/            documentation, baselines and logbook
 | `service.py`           | Decision service (local, ONNX or Triton inference)            |
 | `depot.py`             | Engine history storage interface (in-memory store)            |
 | `api.py`               | FastAPI app, middleware, `/health`                            |
-| `routes_flotte.py`     | Fleet endpoints (`/flotte/...`)                               |
-| `routes_monitoring.py` | Drift endpoint (`/monitoring/derive`)                         |
+| `routes_flotte.py`     | Fleet endpoints (`/fleet/...`, legacy `/flotte/...`)          |
+| `routes_monitoring.py` | Drift endpoint (`/monitoring/drift`)                          |
 | `client_triton.py`     | Client for NVIDIA Triton                                      |
 | `derive.py`            | PSI drift report                                              |
 | `journalisation.py`    | Structured JSON logs                                          |
