@@ -329,3 +329,9 @@
 - **Fait :** Mise en valeur du dépôt (description, topics, en-tête du README avec résultats clés, lien vers l'API et schéma d'architecture). Répétition de l'évaluation NVIDIA. Version finale v7.0.0 publiée.
 - **Appris :** Un projet se juge en 30 secondes : phrase d'accroche, preuve que ça marche (lien en ligne, chiffres), technologies. Une release finale suit les mêmes étapes qu'une release candidate, mais publie aussi le tag `latest`.
 - **Bloquant :** Aucun.
+
+---
+
+- **Fait :** Release finale v7.0.0 : tag reposé sur le bon commit, réessais ajoutés sur le hook Render (erreur curl 56), CD complet vert, API en ligne en 7.0.0, release GitHub « Latest », images 7.0.0 et latest sur GHCR. Ménage des branches et suppression automatique activée.
+- **Appris :** Toujours taguer un main à jour et vert (git pull, git status, git log avant git tag). Un tag déjà publié ne se déplace que si aucune release n'en dépend, sinon on crée une nouvelle version. Un appel réseau isolé dans un pipeline doit avoir des réessais, et un appel dans une boucle en a déjà.
+- **Bloquant :** Aucun.
