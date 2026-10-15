@@ -317,3 +317,9 @@
 - **Fait :** module `sante_systeme.py` (client de monitoring testé avec `httpx.MockTransport`, résumé Markdown) ; page Streamlit System Health (statut, version, mode d'inférence, latence aller-retour et serveur, dérive avec slider) ; workflow hebdomadaire (cron du lundi + bouton manuel) qui publie le rapport et ouvre une issue en cas de dérive forte ; premier rapport en production : 8 moteurs, 341 vols, dérive forte sur la phase de montée.
 - **Appris :** monitoring as code ; le rapport vient à toi au lieu d'attendre qu'on ouvre un dashboard ; `for … else` et `GITHUB_OUTPUT` ; installer un package `--no-deps` pour un job léger ; un rapport doit dire « données insuffisantes » plutôt qu'inventer ; une alerte par lundi = fatigue d'alerte → une seule issue ouverte par sujet ; une alerte se clôt par une conclusion écrite.
 - **Bloquant :** l'historique est perdu à chaque mise en veille de Render (rapport souvent « Not enough engines ») → 7.6-E2 (Redis), optionnelle.
+
+---
+
+- **Fait :** Toutes les PR Dependabot traitées une par une : checkout v7, setup-python v7, setup-buildx v4, codecov-action v7, trivy-action v0.36.0 (binaire Trivy toujours épinglé en v0.69.3), minimums de pytest-cov, ruff, matplotlib, h5py et pandas 3 ; Python 3.14 ignoré. Envoi Codecov vérifié dans le log de main, workflow de dérive lancé à la main, déploiement complet validé avec le tag v7.0.0-rc.5.
+- **Appris :** La CI d'une PR ne teste que ce qui tourne sur une PR : cd.yml se teste avec un tag, drift-report.yml avec un lancement manuel. Les PR Dependabot n'ont pas accès aux secrets, donc Codecov se vérifie après le merge. On merge les PR qui touchent le même fichier une par une, avec un rebase juste avant.
+- **Bloquant :** Aucun.
