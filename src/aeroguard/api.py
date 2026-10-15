@@ -8,7 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from fastapi import FastAPI, Request
 
 from aeroguard.journalisation import configurer_logs
-from aeroguard.routes_flotte import obtenir_service
+from aeroguard.routes_flotte import obtenir_service, routeur_fleet
 from aeroguard.routes_flotte import routeur as routeur_flotte
 from aeroguard.routes_monitoring import routeur as routeur_monitoring
 
@@ -43,10 +43,12 @@ def mode_inference():
 
 app = FastAPI(
     title="AeroGuard API",
-    description="Détection d'anomalies pour moteurs d'avion (NASA N-CMAPSS).",
+    description="Anomaly detection for aircraft engines (NASA N-CMAPSS).",
     version=version_aeroguard(),
 )
 
+# API publique en anglais (visible dans Swagger), puis ancienne API française (cachée).
+app.include_router(routeur_fleet)
 app.include_router(routeur_flotte)
 app.include_router(routeur_monitoring)
 
@@ -73,13 +75,20 @@ async def mesurer_requetes(request: Request, call_next):
     return reponse
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def accueil():
     """Page d'accueil : indique où trouver la documentation interactive."""
     return {"message": "AeroGuard API", "documentation": "/docs"}
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["System"],
+    summary="Service health, version and inference mode",
+    description="Returns the service status, the deployed version, the inference mode "
+    "(local, onnx or triton) and whether the models are already loaded. "
+    "Never loads the models itself.",
+)
 def sante():
     """Le service répond-il ? Ne charge jamais les modèles (appelé en boucle par l'hébergeur)."""
     return {
