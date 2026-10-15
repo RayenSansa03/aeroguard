@@ -1,12 +1,44 @@
 # AeroGuard
 
 [![CI](https://github.com/RayenSansa03/aeroguard/actions/workflows/ci.yml/badge.svg)](https://github.com/RayenSansa03/aeroguard/actions/workflows/ci.yml)
+[![CD](https://github.com/RayenSansa03/aeroguard/actions/workflows/cd.yml/badge.svg)](https://github.com/RayenSansa03/aeroguard/actions/workflows/cd.yml)
+[![Release](https://img.shields.io/github/v/release/RayenSansa03/aeroguard?include_prereleases)](https://github.com/RayenSansa03/aeroguard/releases)
 [![codecov](https://codecov.io/gh/RayenSansa03/aeroguard/branch/main/graph/badge.svg)](https://codecov.io/gh/RayenSansa03/aeroguard)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/RayenSansa03/aeroguard/network/updates)
 
-Anomaly detection system for a fleet of aircraft engines, built on NASA N-CMAPSS data and accelerated on GPU (NVIDIA RAPIDS, XGBoost, TensorFlow).
+**Detect aircraft engine wear early, recognize failures never seen in training, and tell the maintenance team what to do.**
+
+AeroGuard is an end-to-end anomaly detection system built on NASA N-CMAPSS turbofan data: a GPU-accelerated feature pipeline (NVIDIA RAPIDS), a hybrid of XGBoost and an autoencoder, a decision engine, a FastAPI service with ONNX or NVIDIA Triton inference, a Streamlit dashboard, CI/CD and drift monitoring.
+
+**▶ Live API:** <https://aeroguard-api-75tq.onrender.com/docs> (free hosting: the first request may take about a minute while the service wakes up)
+
+### Key results (39 test engines, never seen in training)
+
+| What                                           | Result                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| Known failures warned before breakdown         | **39 / 39** engines, about **40 flights** in advance                      |
+| Never-seen failure (fan removed from training) | hybrid system **4 / 4** engines, versus 2 / 4 for XGBoost alone           |
+| Fleet replay through the API                   | **39 failures avoided**, **0** in-service failures                        |
+| GPU speed-up                                   | cuDF up to **×19.5**, XGBoost training **×4.3**                           |
+| API                                            | ONNX mode ≈ **5 ms** median latency, **76 / 76** parity with the notebook |
+| Quality                                        | **351** automated tests, CI/CD on every tag                               |
+
+### Architecture
+
+```mermaid
+flowchart LR
+    A[NASA N-CMAPSS flights] --> B[Feature pipeline<br/>126 features per flight]
+    B --> C[XGBoost<br/>known wear]
+    B --> D[Autoencoder<br/>per-engine baseline]
+    C --> E[Decision engine<br/>OK / A_SURVEILLER / URGENT]
+    D --> E
+    E --> F[FastAPI service<br/>ONNX or Triton]
+    F --> G[Streamlit dashboard]
+    F --> H[Monitoring<br/>JSON logs + PSI drift]
+    I[GitHub Actions CI/CD] -. image .-> J[GHCR] -. deploy .-> K[Render]
+```
 
 > **Note on figures:** the figures come from the original lab notebooks, so their labels are in French. Each figure is followed by a short "How to read this figure" note explaining the axes, colors and French labels.
 
