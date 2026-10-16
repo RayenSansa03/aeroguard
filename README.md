@@ -24,6 +24,8 @@ AeroGuard is an end-to-end anomaly detection system: a GPU-accelerated feature p
 
 **▶ Live API:** <https://aeroguard-api-75tq.onrender.com/docs> (free hosting: the first request may take about a minute while the service wakes up)
 
+**▶ Try it in your browser:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/RayenSansa03/aeroguard/blob/main/notebooks/try_aeroguard.ipynb) (sends a real NASA test engine to the live API, flight by flight: confirmed alert 46 flights before failure)
+
 ### Key results (39 test engines, never seen in training)
 
 | What                                           | Result                                                                    |
