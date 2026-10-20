@@ -25,5 +25,5 @@ mlflow>=2.14
 tensorflow>=2.16
 
 # API
-fastapi>=0.115
+fastapi>=0.143.3
 uvicorn>=0.30
