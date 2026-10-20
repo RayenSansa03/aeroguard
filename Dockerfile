@@ -1,5 +1,5 @@
 # ---------- Stage 1 : build ----------
-FROM python:3.13-slim AS builder
+FROM python:3.15-slim AS builder
 
 WORKDIR /build
 
@@ -21,7 +21,7 @@ RUN pip uninstall -y pip
 
 
 # ---------- Stage 2 : runtime ----------
-FROM python:3.13-slim AS runtime
+FROM python:3.15-slim AS runtime
 
 # Version livrée, injectée au build depuis le tag Git (voir cd.yml)
 ARG AEROGUARD_VERSION=dev
