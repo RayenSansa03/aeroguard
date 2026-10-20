@@ -7,7 +7,7 @@ pyarrow>=18        # lire et écrire les fichiers Parquet
 matplotlib>=3.11.2
 
 # Notebooks dans VS Code
-ipykernel>=6.29
+ipykernel>=7.4.0
 
 # Tests
 pytest>=8.0
